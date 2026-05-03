@@ -1075,12 +1075,12 @@ punycode@^2.1.0:
   integrity sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==
 
 "react-dom@file:../../build/oss-experimental/react-dom":
-  version "0.0.0-experimental-09f585dd-20260503"
+  version "0.0.0-experimental-6bdb677b-20260503"
   dependencies:
-    scheduler "0.0.0-experimental-09f585dd-20260503"
+    scheduler "0.0.0-experimental-6bdb677b-20260503"
 
 "react@file:../../build/oss-experimental/react":
-  version "0.0.0-experimental-09f585dd-20260503"
+  version "0.0.0-experimental-6bdb677b-20260503"
 
 rolldown@1.0.0-rc.17:
   version "1.0.0-rc.17"
@@ -1106,8 +1106,8 @@ rolldown@1.0.0-rc.17:
     "@rolldown/binding-win32-arm64-msvc" "1.0.0-rc.17"
     "@rolldown/binding-win32-x64-msvc" "1.0.0-rc.17"
 
-scheduler@0.0.0-experimental-09f585dd-20260503, "scheduler@file:../../build/oss-experimental/scheduler", "scheduler@file:/Users/daixiaofeng/xf-source-code/react/build/oss-experimental/scheduler":
-  version "0.0.0-experimental-09f585dd-20260503"
+scheduler@0.0.0-experimental-6bdb677b-20260503, "scheduler@file:../../build/oss-experimental/scheduler", "scheduler@file:/Users/daixiaofeng/xf-source-code/react/build/oss-experimental/scheduler":
+  version "0.0.0-experimental-6bdb677b-20260503"
 
 semver@^6.3.1:
   version "6.3.1"
