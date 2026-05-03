@@ -189,7 +189,7 @@ export function createFiberRoot(
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): FiberRoot {
   console.log(
-    '[ReactSource:L1] createFiberRoot: 创建 FiberRoot，并把 HostRoot Fiber 与 root.current 双向关联',
+    '[ReactSource:L1] Fiber架构: createFiberRoot 创建 FiberRoot，并把 HostRoot Fiber 与 root.current 双向关联',
   );
   // 1. 创建 FiberRootNode。它代表整个 React 应用根，保存 containerInfo、
   // pendingLanes、callbackNode、缓存、错误处理回调等根级状态。

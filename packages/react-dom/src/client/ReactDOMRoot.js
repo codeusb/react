@@ -110,7 +110,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
   function (children: ReactNodeList): void {
     console.log(
-      '[ReactSource:L1] ReactDOMRoot.render: 应用根实例开始渲染，向 reconciler 发起 updateContainer',
+      '[ReactSource:L2] ReactDOMRoot.render: 应用根实例开始渲染，向 reconciler 发起 updateContainer',
     );
     // root.render(<App />) 调用的是 ReactDOMRoot 原型方法。
     // 初始化完成后，这里取出 createRoot 阶段保存的 FiberRoot。
@@ -182,7 +182,7 @@ export function createRoot(
   options?: CreateRootOptions,
 ): RootType {
   console.log(
-    '[ReactSource:L1] createRoot: React 应用初始化入口，创建 ReactDOMRoot，render 负责渲染根组件',
+    '[ReactSource:L2] createRoot: React 应用初始化入口，创建 ReactDOMRoot，render 负责渲染根组件',
   );
   // 1. 校验容器元素 container 是否合法。
   if (!isValidContainer(container)) {

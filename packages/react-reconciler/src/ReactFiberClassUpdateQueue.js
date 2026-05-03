@@ -212,7 +212,7 @@ export function cloneUpdateQueue<State>(
 
 export function createUpdate(lane: Lane): Update<mixed> {
   console.log(
-    '[ReactSource:L1] createUpdate: 创建更新对象，记录 lane、payload、callback',
+    '[ReactSource:L2] createUpdate: 创建更新对象，记录 lane、payload、callback',
   );
   const update: Update<mixed> = {
     lane,
@@ -232,7 +232,7 @@ export function enqueueUpdate<State>(
   lane: Lane,
 ): FiberRoot | null {
   console.log(
-    '[ReactSource:L1] enqueueUpdate: 把 update 放入 Fiber 的 updateQueue，并返回待调度 root',
+    '[ReactSource:L2] enqueueUpdate: 把 update 放入 Fiber 的 updateQueue，并返回待调度 root',
   );
   const updateQueue = fiber.updateQueue;
   if (updateQueue === null) {
@@ -501,7 +501,7 @@ export function processUpdateQueue<State>(
   renderLanes: Lanes,
 ): void {
   console.log(
-    '[ReactSource:L1] processUpdateQueue: render 阶段按 lane 计算 updateQueue 得到新 state',
+    '[ReactSource:L2] processUpdateQueue: render 阶段按 lane 计算 updateQueue 得到新 state',
   );
   didReadFromEntangledAsyncAction = false;
 

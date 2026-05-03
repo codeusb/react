@@ -1437,7 +1437,7 @@ function updateFunctionComponent(
   renderLanes: Lanes,
 ) {
   console.log(
-    '[ReactSource:L1] updateFunctionComponent: beginWork 处理函数组件，执行组件函数并得到 children',
+    '[ReactSource:L2] updateFunctionComponent: beginWork 处理函数组件，执行组件函数并得到 children',
   );
   if (__DEV__) {
     if (
@@ -1818,7 +1818,7 @@ function updateHostRoot(
   renderLanes: Lanes,
 ) {
   console.log(
-    '[ReactSource:L1] updateHostRoot: beginWork 处理 HostRoot，把 root.render 的 ReactElement 取出来',
+    '[ReactSource:L2] updateHostRoot: beginWork 处理 HostRoot，把 root.render 的 ReactElement 取出来',
   );
   pushHostRootContext(workInProgress);
 
@@ -4139,7 +4139,7 @@ function beginWork(
   renderLanes: Lanes,
 ): Fiber | null {
   console.log(
-    '[ReactSource:L1] beginWork: render 递阶段核心，根据 Fiber tag 创建或复用子 Fiber',
+    '[ReactSource:L1] Render阶段: beginWork 是递阶段核心，根据 Fiber tag 创建或复用子 Fiber',
   );
   if (__DEV__) {
     if (workInProgress._debugNeedsRemount && current !== null) {

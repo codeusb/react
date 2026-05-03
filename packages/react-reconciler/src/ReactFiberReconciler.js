@@ -262,7 +262,7 @@ export function createContainer(
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): OpaqueRoot {
   console.log(
-    '[ReactSource:L1] createContainer: react-dom 进入 reconciler，准备创建 FiberRoot 容器',
+    '[ReactSource:L1] Reconciler: createContainer 准备创建 FiberRoot 容器',
   );
   // createRoot 普通客户端渲染不走 hydration，因此 hydrate 为 false。
   const hydrate = false;
@@ -372,7 +372,7 @@ export function updateContainer(
   callback: ?Function,
 ): Lane {
   console.log(
-    '[ReactSource:L1] updateContainer: render 调用后的更新入口，创建 update 并调度到 FiberRoot',
+    '[ReactSource:L1] Reconciler: updateContainer 是 render 调用后的更新入口，创建 update 并调度到 FiberRoot',
   );
   // container.current 就是 createFiberRoot 阶段创建的 HostRoot Fiber。
   const current = container.current;

@@ -115,7 +115,7 @@ let currentEventTransitionLane: Lane = NoLane;
 
 export function ensureRootIsScheduled(root: FiberRoot): void {
   console.log(
-    '[ReactSource:L1] ensureRootIsScheduled: 确保 root 进入调度队列，并安排微任务处理后续 work',
+    '[ReactSource:L2] ensureRootIsScheduled: 确保 root 进入调度队列，并安排微任务处理后续 work',
   );
   // ReactSource: 对应 React 18 教程里“注册调度任务”的入口。React 19 把
   // 具体优先级选择拆到 scheduleTaskForRootDuringMicrotask；这里先确保 root
@@ -541,7 +541,7 @@ function performWorkOnRootViaSchedulerTask(
   didTimeout: boolean,
 ): RenderTaskFn | null {
   console.log(
-    '[ReactSource:L1] performConcurrentWorkOnRoot: 当前版本对应的并发调度入口，经 Scheduler 执行 root work',
+    '[ReactSource:L1] concurrent 并发: performConcurrentWorkOnRoot 经 Scheduler 执行 root work',
   );
   // ReactSource: React 19 当前对应旧文档里的 performConcurrentWorkOnRoot。
   // Scheduler 执行到这个 callback 后，才真正进入 performWorkOnRoot。
@@ -646,7 +646,7 @@ function performWorkOnRootViaSchedulerTask(
 
 function performSyncWorkOnRoot(root: FiberRoot, lanes: Lanes) {
   console.log(
-    '[ReactSource:L1] performSyncWorkOnRoot: 同步任务入口，不经 Scheduler 时间切片，直接执行 root work',
+    '[ReactSource:L2] performSyncWorkOnRoot: 同步任务入口，不经 Scheduler 时间切片，直接执行 root work',
   );
   // ReactSource: 同步任务入口。它不经过 Scheduler 时间切片，而是 flush passive
   // effects 后强制以 forceSync=true 进入 performWorkOnRoot。

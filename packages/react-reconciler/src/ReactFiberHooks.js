@@ -509,7 +509,7 @@ export function renderWithHooks<Props, SecondArg>(
   nextRenderLanes: Lanes,
 ): any {
   console.log(
-    '[ReactSource:L1] renderWithHooks: 执行函数组件，并在执行期间接管 Hooks 调用',
+    '[ReactSource:L2] renderWithHooks: 执行函数组件，并在执行期间接管 Hooks 调用',
   );
   renderLanes = nextRenderLanes;
   currentlyRenderingFiber = workInProgress;

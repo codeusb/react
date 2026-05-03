@@ -922,7 +922,7 @@ export function scheduleUpdateOnFiber(
   lane: Lane,
 ) {
   console.log(
-    '[ReactSource:L1] scheduleUpdateOnFiber: Fiber 更新调度入口，标记 lanes 并确保 root 被调度',
+    '[ReactSource:L2] scheduleUpdateOnFiber: Fiber 更新调度入口，标记 lanes 并确保 root 被调度',
   );
   if (__DEV__) {
     if (isRunningInsertionEffect) {
@@ -2563,7 +2563,7 @@ function renderRootSync(
   shouldYieldForPrerendering: boolean,
 ): RootExitStatus {
   console.log(
-    '[ReactSource:L1] renderRootSync: 同步 render 阶段入口，构建 workInProgress Fiber Tree',
+    '[ReactSource:L1] Render阶段: renderRootSync 是同步 render 阶段入口，构建 workInProgress Fiber Tree',
   );
   // ReactSource: 保存旧 executionContext，并把当前执行上下文切到
   // RenderContext。之后 beginWork/completeWork 都运行在 render 阶段。
@@ -3022,7 +3022,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
 /** @noinline */
 function workLoopConcurrent(nonIdle: boolean) {
   console.log(
-    '[ReactSource:L1] 异步可中断: workLoopConcurrent 循环执行 Fiber 单元，时间片不足时让出执行权',
+    '[ReactSource:L1] 异步可中断 / 时间切片: workLoopConcurrent 循环执行 Fiber 单元，时间片不足时让出执行权',
   );
   // ReactSource: 并发模式下每次只在当前时间预算内处理 Fiber。到达 yieldAfter
   // 后退出，让浏览器有机会处理输入、动画等更高优先级工作。
@@ -3054,7 +3054,7 @@ function workLoopConcurrentByScheduler() {
 
 function performUnitOfWork(unitOfWork: Fiber): void {
   console.log(
-    '[ReactSource:L1] performUnitOfWork: render 阶段单个 Fiber 工作单元，先 beginWork，必要时进入 completeUnitOfWork',
+    '[ReactSource:L2] performUnitOfWork: render 阶段单个 Fiber 工作单元，先 beginWork，必要时进入 completeUnitOfWork',
   );
   // ReactSource: unitOfWork 是当前正在构建的 workInProgress Fiber；
   // current = unitOfWork.alternate 是页面上已提交的旧 Fiber，对应双缓存机制。
@@ -3348,7 +3348,7 @@ function panicOnRootError(root: FiberRoot, error: mixed) {
 
 function completeUnitOfWork(unitOfWork: Fiber): void {
   console.log(
-    '[ReactSource:L1] completeUnitOfWork: Fiber 递归归阶段，执行 completeWork 并向父级冒泡',
+    '[ReactSource:L2] completeUnitOfWork: Fiber 递归归阶段，执行 completeWork 并向父级冒泡',
   );
   // ReactSource: completeUnitOfWork 是“归”阶段。它会调用 completeWork
   // 补全当前 Fiber 的副作用/DOM 准备工作，然后优先去 sibling，没有 sibling
@@ -3521,7 +3521,7 @@ function commitRoot(
   completedRenderEndTime: number, // Profiling-only
 ): void {
   console.log(
-    '[ReactSource:L1] commitRoot: render 完成后进入 commit 阶段，提交副作用到宿主环境',
+    '[ReactSource:L1] Commit阶段: commitRoot 在 render 完成后提交副作用到宿主环境',
   );
   root.cancelPendingCommit = null;
 

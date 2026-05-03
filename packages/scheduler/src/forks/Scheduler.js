@@ -333,7 +333,7 @@ function unstable_scheduleCallback(
   options?: {delay: number},
 ): Task {
   console.log(
-    '[ReactSource:L1] unstable_scheduleCallback: Scheduler 调度任务入口，按优先级创建 task 并入队',
+    '[ReactSource:L1] Scheduler: unstable_scheduleCallback 调度任务入口，按优先级创建 task 并入队',
   );
   var currentTime = getCurrentTime();
 
@@ -452,7 +452,7 @@ let startTime = -1;
 
 function shouldYieldToHost(): boolean {
   console.log(
-    '[ReactSource:L1] 异步可中断: shouldYieldToHost 判断当前时间片是否应该让出主线程',
+    '[ReactSource:L1] 异步可中断 / 时间切片: shouldYieldToHost 判断当前时间片是否应该让出主线程',
   );
   if (!enableAlwaysYieldScheduler && enableRequestPaint && needsPaint) {
     // Yield now.
