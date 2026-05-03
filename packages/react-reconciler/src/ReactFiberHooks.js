@@ -1932,6 +1932,9 @@ function mountStateImpl<S>(initialState: (() => S) | S): Hook {
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  console.log(
+    '[ReactSource: Hook] useState(mount): mountState 创建 Hook 节点与 queue，并返回 dispatchSetState',
+  );
   const hook = mountStateImpl(initialState);
   const queue = hook.queue;
   const dispatch: Dispatch<BasicStateAction<S>> = (dispatchSetState.bind(
@@ -1946,6 +1949,9 @@ function mountState<S>(
 function updateState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  console.log(
+    '[ReactSource: Hook] useState(update): updateState 走 updateReducer，消费队列并计算新 state',
+  );
   return updateReducer(basicStateReducer, initialState);
 }
 
@@ -2610,6 +2616,9 @@ function createEffectInstance(): EffectInstance {
 }
 
 function mountRef<T>(initialValue: T): {current: T} {
+  console.log(
+    '[ReactSource: Hook] useRef(mount): mountRef 创建稳定 ref 对象并挂到 hook.memoizedState',
+  );
   const hook = mountWorkInProgressHook();
   const ref = {current: initialValue};
   hook.memoizedState = ref;
@@ -2617,6 +2626,9 @@ function mountRef<T>(initialValue: T): {current: T} {
 }
 
 function updateRef<T>(initialValue: T): {current: T} {
+  console.log(
+    '[ReactSource: Hook] useRef(update): updateRef 直接复用上一轮 ref 对象，不触发渲染',
+  );
   const hook = updateWorkInProgressHook();
   return hook.memoizedState;
 }
@@ -2682,6 +2694,9 @@ function mountEffect(
   create: () => (() => void) | void,
   deps: Array<mixed> | void | null,
 ): void {
+  console.log(
+    '[ReactSource: Hook] useEffect(mount): mountEffect 记录 PassiveEffect，effect 在 commit passive 阶段执行',
+  );
   if (
     __DEV__ &&
     (currentlyRenderingFiber.mode & StrictEffectsMode) !== NoMode
@@ -2706,6 +2721,9 @@ function updateEffect(
   create: () => (() => void) | void,
   deps: Array<mixed> | void | null,
 ): void {
+  console.log(
+    '[ReactSource: Hook] useEffect(update): updateEffect 对比 deps，变化则打 HookHasEffect 等待 commit 执行',
+  );
   updateEffectImpl(PassiveEffect, HookPassive, create, deps);
 }
 
@@ -2903,6 +2921,9 @@ function mountDebugValue<T>(value: T, formatterFn: ?(value: T) => mixed): void {
 const updateDebugValue = mountDebugValue;
 
 function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+  console.log(
+    '[ReactSource: Hook] useCallback(mount): mountCallback 缓存回调与 deps，返回原回调引用',
+  );
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   hook.memoizedState = [callback, nextDeps];
@@ -2910,6 +2931,9 @@ function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 }
 
 function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
+  console.log(
+    '[ReactSource: Hook] useCallback(update): updateCallback 对比 deps，命中则复用旧函数引用',
+  );
   const hook = updateWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   const prevState = hook.memoizedState;
@@ -2927,6 +2951,9 @@ function mountMemo<T>(
   nextCreate: () => T,
   deps: Array<mixed> | void | null,
 ): T {
+  console.log(
+    '[ReactSource: Hook] useMemo(mount): mountMemo 立即执行 create 并缓存 value 与 deps',
+  );
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   const nextValue = nextCreate();
@@ -2946,6 +2973,9 @@ function updateMemo<T>(
   nextCreate: () => T,
   deps: Array<mixed> | void | null,
 ): T {
+  console.log(
+    '[ReactSource: Hook] useMemo(update): updateMemo 对比 deps，命中则复用 value，否则重新计算',
+  );
   const hook = updateWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   const prevState = hook.memoizedState;

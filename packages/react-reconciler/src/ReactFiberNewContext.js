@@ -500,6 +500,9 @@ export function prepareToReadContext(
 }
 
 export function readContext<T>(context: ReactContext<T>): T {
+  console.log(
+    '[ReactSource: Hook] useContext(read): readContext 读取 context 当前值，并把依赖登记到 Fiber.dependencies',
+  );
   if (__DEV__) {
     // This warning would fire if you read context inside a Hook like useMemo.
     // Unlike the class check below, it's not enforced in production for perf.
