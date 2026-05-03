@@ -936,6 +936,9 @@ export function scheduleUpdateOnFiber(
     }
   }
 
+  // ReactSource: updateContainer 把 update 入队后会走到这里。
+  // scheduleUpdateOnFiber 是 render 阶段之前的更新调度入口：先把本次
+  // update 对应的 lane 标记到 FiberRoot，再确保这个 root 后续会被调度。
   // Check if the work loop is currently suspended and waiting for data to
   // finish loading.
   if (
@@ -958,6 +961,8 @@ export function scheduleUpdateOnFiber(
     );
   }
 
+  // ReactSource: 标记 FiberRoot 上存在待处理的更新 lane。后续
+  // getNextLanes 会根据这些 pending lanes 选出下一批要 render 的任务。
   // Mark that the root has a pending update.
   markRootUpdated(root, lane);
 
@@ -965,6 +970,8 @@ export function scheduleUpdateOnFiber(
     (executionContext & RenderContext) !== NoContext &&
     root === workInProgressRoot
   ) {
+    // ReactSource: render 阶段内又产生了更新。普通业务代码一般不应这样做；
+    // React 会把 lane 合并到 render-phase updated lanes，稍后重新处理。
     // This update was dispatched during the render phase. This is a mistake
     // if the update originates from user space (with the exception of local
     // hook updates, which are handled differently and don't reach this
@@ -978,6 +985,8 @@ export function scheduleUpdateOnFiber(
       lane,
     );
   } else {
+    // ReactSource: 正常路径。比如 root.render、事件回调 setState 都属于
+    // render 阶段外部发起的更新，接下来会进入 root 调度流程。
     // This is a normal update, scheduled from outside the render phase. For
     // example, during an input event.
     if (enableUpdaterTracking) {
@@ -1025,6 +1034,8 @@ export function scheduleUpdateOnFiber(
       }
     }
 
+    // ReactSource: 注册/刷新 root 的调度任务。真正选择同步、并发、微任务或
+    // Scheduler task 的逻辑在 ReactFiberRootScheduler 中继续完成。
     ensureRootIsScheduled(root);
     if (
       lane === SyncLane &&
@@ -1074,6 +1085,9 @@ export function performWorkOnRoot(
   lanes: Lanes,
   forceSync: boolean,
 ): void {
+  // ReactSource: React 19 中 performSyncWorkOnRoot 和旧文档里的
+  // performConcurrentWorkOnRoot 最终都会汇合到这里。这里负责选择
+  // renderRootSync / renderRootConcurrent，render 完成后再进入 commit。
   if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
     throw new Error('Should not already be working.');
   }
@@ -1097,6 +1111,8 @@ export function performWorkOnRoot(
     }
   }
 
+  // ReactSource: 是否允许时间切片。forceSync、阻塞 lane、过期 lane 会走
+  // 同步 render；可并发的 lane 会走 renderRootConcurrent，允许中断恢复。
   // We disable time-slicing in some cases: if the work has been CPU-bound
   // for too long ("expired" work, to prevent starvation), or we're in
   // sync-updates-by-default mode.
@@ -1147,6 +1163,8 @@ export function performWorkOnRoot(
         renderEndTime = now();
       }
 
+      // ReactSource: render 阶段已经构建出 finishedWork。后面会处理错误、
+      // Suspense、一致性检查，最终把 finishedWork 交给 commit 阶段。
       // The render completed.
 
       // Check if this render may have yielded to a concurrent event, and if so,
@@ -1518,6 +1536,9 @@ function commitRootWhenReady(
   completedRenderStartTime: number, // Profiling-only
   completedRenderEndTime: number, // Profiling-only
 ) {
+  // ReactSource: React 19 在 commitRoot 前多了一层 commitRootWhenReady。
+  // 它会让 renderer 检查 Suspensey resource / View Transition / Gesture
+  // 是否已经准备好；准备好才真正调用 commitRoot，否则延迟 commit。
   root.timeoutHandle = noTimeout;
 
   // TODO: Combine retry throttling with Suspensey commits. Right now they run
@@ -1601,6 +1622,7 @@ function commitRootWhenReady(
     }
   }
 
+  // ReactSource: 没有需要等待的宿主资源，就立即进入 commitRoot。
   // Otherwise, commit immediately.;
   commitRoot(
     root,
@@ -2543,11 +2565,16 @@ function renderRootSync(
   console.log(
     '[ReactSource:L1] renderRootSync: 同步 render 阶段入口，构建 workInProgress Fiber Tree',
   );
+  // ReactSource: 保存旧 executionContext，并把当前执行上下文切到
+  // RenderContext。之后 beginWork/completeWork 都运行在 render 阶段。
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher(root.containerInfo);
   const prevAsyncDispatcher = pushAsyncDispatcher();
 
+  // ReactSource: 如果 root 或 lanes 变化，说明不能复用之前暂停的栈，
+  // 需要基于 current 树重新准备 workInProgress 树，也就是 Fiber 双缓存里的
+  // alternate 工作树。
   // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
@@ -2640,10 +2667,14 @@ function renderRootSync(
           }
         }
       }
+      // ReactSource: 同步 render 不检查 shouldYield，会一直深度优先处理
+      // Fiber 工作单元，直到整棵 workInProgress 树完成或抛出/挂起。
       workLoopSync();
       exitStatus = workInProgressRootExitStatus;
       break;
     } catch (thrownValue) {
+      // ReactSource: beginWork/completeWork 中抛出的错误或 Promise 会在这里
+      // 被统一处理，然后循环重试或展开到 Suspense / ErrorBoundary。
       handleThrow(root, thrownValue);
     }
   } while (true);
@@ -2658,6 +2689,7 @@ function renderRootSync(
     root.shellSuspendCounter++;
   }
 
+  // ReactSource: render 阶段结束后恢复上下文/Dispatcher，避免影响下一次更新。
   resetContextDependencies();
 
   executionContext = prevExecutionContext;
@@ -2674,6 +2706,8 @@ function renderRootSync(
   } else {
     // Normal case. We completed the whole tree.
 
+    // ReactSource: workInProgress 为空代表 Fiber 树构建完成。清空全局渲染状态，
+    // 并把并发更新队列里暂存的 update 挂回对应 Fiber。
     // Set this to null to indicate there's no in-progress render.
     workInProgressRoot = null;
     workInProgressRootRenderLanes = NoLanes;
@@ -2691,6 +2725,8 @@ function workLoopSync() {
   console.log(
     '[ReactSource:L2] workLoopSync: 同步循环执行 performUnitOfWork，直到 workInProgress 为空',
   );
+  // ReactSource: 同步模式不会让出主线程；每次 performUnitOfWork 处理一个
+  // Fiber 节点，next 指针推动深度优先遍历。
   // Perform work without checking if we need to yield between fiber.
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
@@ -2701,11 +2737,15 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
   console.log(
     '[ReactSource:L1] concurrent 并发: renderRootConcurrent 是并发 render 阶段入口，构建 Fiber Tree 且允许中断恢复',
   );
+  // ReactSource: 并发 render 同样进入 RenderContext，但工作循环会定期检查
+  // 时间片/shouldYield，所以这棵 workInProgress 树可能分多次任务完成。
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher(root.containerInfo);
   const prevAsyncDispatcher = pushAsyncDispatcher();
 
+  // ReactSource: 首次进入或 lane 改变时准备 fresh stack；如果是同一个 root
+  // 同一批 lanes 的 continuation，则沿用上次中断时的 workInProgress。
   // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
@@ -2934,6 +2974,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
         // This is not just an optimization: in a unit test environment, we
         // can't trust the result of `shouldYield`, because the host I/O is
         // likely mocked.
+        // ReactSource: act 测试环境为了结果可预测，会强制同步跑完整个 work loop。
         workLoopSync();
       } else if (enableThrottledScheduling) {
         workLoopConcurrent(includesNonIdleWork(lanes));
@@ -2951,6 +2992,8 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
   popAsyncDispatcher(prevAsyncDispatcher);
   executionContext = prevExecutionContext;
 
+  // ReactSource: workInProgress 不为空表示本次时间片还没跑完，返回
+  // RootInProgress，Scheduler 稍后继续；为空才表示 render 阶段完成。
   // Check if the tree has completed.
   if (workInProgress !== null) {
     // Still work remaining.
@@ -2981,6 +3024,8 @@ function workLoopConcurrent(nonIdle: boolean) {
   console.log(
     '[ReactSource:L1] 异步可中断: workLoopConcurrent 循环执行 Fiber 单元，时间片不足时让出执行权',
   );
+  // ReactSource: 并发模式下每次只在当前时间预算内处理 Fiber。到达 yieldAfter
+  // 后退出，让浏览器有机会处理输入、动画等更高优先级工作。
   // We yield every other "frame" when rendering Transition or Retries. Those are blocking
   // revealing new content. The purpose of this yield is not to avoid the overhead of yielding,
   // which is very low, but rather to intentionally block any frequently occuring other main
@@ -2998,6 +3043,8 @@ function workLoopConcurrent(nonIdle: boolean) {
 
 /** @noinline */
 function workLoopConcurrentByScheduler() {
+  // ReactSource: 另一条并发循环路径，直接询问 Scheduler.shouldYield。
+  // 一旦 Scheduler 要求让出主线程，就保留 workInProgress，下次继续。
   // Perform work until Scheduler asks us to yield
   while (workInProgress !== null && !shouldYield()) {
     // $FlowFixMe[incompatible-call] flow doesn't know that shouldYield() is side-effect free
@@ -3009,11 +3056,15 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   console.log(
     '[ReactSource:L1] performUnitOfWork: render 阶段单个 Fiber 工作单元，先 beginWork，必要时进入 completeUnitOfWork',
   );
+  // ReactSource: unitOfWork 是当前正在构建的 workInProgress Fiber；
+  // current = unitOfWork.alternate 是页面上已提交的旧 Fiber，对应双缓存机制。
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
 
+  // ReactSource: beginWork 是“递”阶段。它会根据当前 Fiber 类型和 pendingProps
+  // 计算子节点，并把 ReactElement 子树转成子 Fiber。
   let next;
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
@@ -3043,11 +3094,15 @@ function performUnitOfWork(unitOfWork: Fiber): void {
     }
   }
 
+  // ReactSource: beginWork 完成后，pendingProps 成为本次 render 的
+  // memoizedProps，作为下一次更新的对比基准。
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   if (next === null) {
+    // ReactSource: 没有子 Fiber，进入“归”阶段 completeUnitOfWork。
     // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);
   } else {
+    // ReactSource: 有子 Fiber，深度优先继续处理 child。
     workInProgress = next;
   }
 }
@@ -3295,6 +3350,9 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
   console.log(
     '[ReactSource:L1] completeUnitOfWork: Fiber 递归归阶段，执行 completeWork 并向父级冒泡',
   );
+  // ReactSource: completeUnitOfWork 是“归”阶段。它会调用 completeWork
+  // 补全当前 Fiber 的副作用/DOM 准备工作，然后优先去 sibling，没有 sibling
+  // 就向 return 父 Fiber 冒泡。
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
   let completedWork: Fiber = unitOfWork;
@@ -3317,6 +3375,9 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     const current = completedWork.alternate;
     const returnFiber = completedWork.return;
 
+    // ReactSource: completeWork 是“归”阶段的核心。它根据 Fiber tag 做收尾：
+    // HostComponent mount 时创建 DOM，update 时收集更新标记；随后 bubbleProperties
+    // 把子树 flags / lanes 冒泡到父 Fiber。
     let next;
     startProfilerTimer(completedWork);
     if (__DEV__) {
@@ -3342,10 +3403,14 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
+      // ReactSource: 当前 Fiber complete 完，如果还有兄弟节点，就把
+      // workInProgress 指向 sibling。下一轮 performUnitOfWork 会从兄弟节点
+      // 的 beginWork 开始，继续深度优先遍历。
       // If there is more work to do in this returnFiber, do that next.
       workInProgress = siblingFiber;
       return;
     }
+    // ReactSource: 没有 sibling，说明这一层子节点已经归并完成，向父 Fiber 冒泡。
     // Otherwise, return to the parent
     // $FlowFixMe[incompatible-type] we bail out when we get a null
     completedWork = returnFiber;
@@ -3353,6 +3418,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     workInProgress = completedWork;
   } while (completedWork !== null);
 
+  // ReactSource: 一直冒泡到 root，表示整棵 workInProgress Fiber Tree 的
+  // render 阶段完成，后续就可以进入 commit。
   // We've reached the root.
   if (workInProgressRootExitStatus === RootInProgress) {
     workInProgressRootExitStatus = RootCompleted;
@@ -3458,6 +3525,8 @@ function commitRoot(
   );
   root.cancelPendingCommit = null;
 
+  // ReactSource: commit 阶段开始前，先把上一轮遗留的 passive effects 冲刷干净。
+  // passive effects 内部可能继续触发同步更新，所以这里用循环，直到没有 pending effects。
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
     // means `flushPassiveEffects` will sometimes result in additional
@@ -3511,6 +3580,8 @@ function commitRoot(
     markCommitStarted(lanes);
   }
 
+  // ReactSource: finishedWork 是 render 阶段构建完成的 workInProgress Fiber 树。
+  // 如果为空，说明没有可提交的树，直接结束本次 commit。
   if (finishedWork === null) {
     if (enableSchedulingProfiler) {
       markCommitStopped();
@@ -3540,6 +3611,8 @@ function commitRoot(
     );
   }
 
+  // ReactSource: 计算 commit 后 root 上还剩哪些 lanes 没完成。finishedWork 自身
+  // 和子树的 lanes 会保留下来，已经提交的 lanes 会被 markRootFinished 清掉。
   // Check which lanes no longer have any work scheduled on them, and mark
   // those as finished.
   let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes);
@@ -3561,6 +3634,8 @@ function commitRoot(
     remainingLanes &= ~GestureLane;
   }
 
+  // ReactSource: 标记本次 lanes 已完成，并重置 root 上与这些 lanes 相关的
+  // pending/suspended/pinged 等优先级状态。
   markRootFinished(
     root,
     lanes,
@@ -3574,6 +3649,8 @@ function commitRoot(
   didIncludeCommitPhaseUpdate = false;
 
   if (root === workInProgressRoot) {
+    // ReactSource: render 阶段的全局 workInProgress 状态已经提交完，清空它们，
+    // 允许后续更新重新创建新的 render stack。
     // We can reset these now that they are finished.
     workInProgressRoot = null;
     workInProgress = null;
@@ -3584,6 +3661,9 @@ function commitRoot(
     // times out.
   }
 
+  // ReactSource: 把本次 commit 所需信息暂存到 pendingEffects*。React 19 会把
+  // mutation/layout/passive 等阶段拆成多个 flush 函数，通过这些全局 pending
+  // 状态串起来。
   // workInProgressX might be overwritten, so we want
   // to store it in pendingPassiveX until they get processed
   // We need to pass this through as an argument to commitRoot
@@ -3620,6 +3700,8 @@ function commitRoot(
     return;
   }
 
+  // ReactSource: before mutation 阶段之前，先检查整棵树是否有 Passive 相关 flags。
+  // 如果有，就尽早调度 NormalPriority callback 去处理 useEffect 的销毁/创建。
   // If there are pending passive effects, schedule a callback to process them.
   // Do this as early as possible, so it is queued before anything else that
   // might get scheduled in the commit phase. (See #16714.)
@@ -3697,6 +3779,10 @@ function commitRoot(
 
   resetShouldStartViewTransition();
 
+  // ReactSource: commit 主要分为三个同步子阶段：
+  // 1. before mutation: 读 DOM 变更前快照，例如 getSnapshotBeforeUpdate
+  // 2. mutation: 真正执行 DOM 插入、删除、更新、ref detach
+  // 3. layout: DOM 已更新后执行 layout effects、生命周期、ref attach
   // The commit phase is broken into several sub-phases. We do a separate pass
   // of the effect list for each phase: all mutation effects come before all
   // layout effects, and so on.
@@ -3706,6 +3792,8 @@ function commitRoot(
   // to check for the existence of `firstEffect` to satisfy Flow. I think the
   // only other reason this optimization exists is because it affects profiling.
   // Reconsider whether this is necessary.
+  // ReactSource: 先用 subtreeFlags/flags 快速判断是否存在 before mutation 或
+  // mutation 相关副作用，没有就跳过这部分遍历。
   const subtreeHasBeforeMutationEffects =
     (finishedWork.subtreeFlags & (BeforeMutationMask | MutationMask)) !==
     NoFlags;
@@ -3720,6 +3808,8 @@ function commitRoot(
     const prevExecutionContext = executionContext;
     executionContext |= CommitContext;
     try {
+      // ReactSource: before mutation 阶段。此时 DOM 还没有被修改，可以读取旧 DOM
+      // 状态，类组件的 getSnapshotBeforeUpdate 就属于这里。
       // The first phase a "before mutation" phase. We use this phase to read the
       // state of the host tree right before we mutate it. This is where
       // getSnapshotBeforeUpdate is called.
@@ -3872,6 +3962,8 @@ function flushMutationEffects(): void {
     (finishedWork.subtreeFlags & MutationMask) !== NoFlags;
   const rootMutationHasEffect = (finishedWork.flags & MutationMask) !== NoFlags;
 
+  // ReactSource: mutation 阶段只关心 MutationMask，例如 Placement、Update、
+  // ChildDeletion、ContentReset、Ref 等会改变宿主环境的副作用。
   if (subtreeMutationHasEffects || rootMutationHasEffect) {
     const prevTransition = ReactSharedInternals.T;
     ReactSharedInternals.T = null;
@@ -3880,6 +3972,8 @@ function flushMutationEffects(): void {
     const prevExecutionContext = executionContext;
     executionContext |= CommitContext;
     try {
+      // ReactSource: mutation 阶段。这里会调用 renderer 执行 DOM 插入/删除/属性更新，
+      // 也会处理部分 ref detach、ContentReset 等宿主树变更。
       // The next phase is the mutation phase, where we mutate the host tree.
       commitMutationEffects(root, finishedWork, lanes);
 
@@ -3897,6 +3991,9 @@ function flushMutationEffects(): void {
     }
   }
 
+  // ReactSource: mutation 完成后切换 current 指针。必须在 mutation 后，
+  // 因为 unmount 期间仍要能看到旧树；也必须在 layout 前，因为 layout effects
+  // 读取的应该是已经提交的新树。
   // The work-in-progress tree is now the current tree. This must come after
   // the mutation phase, so that the previous tree is still current during
   // componentWillUnmount, but before the layout phase, so that the finished
@@ -3957,6 +4054,8 @@ function flushLayoutEffects(): void {
     }
   }
 
+  // ReactSource: layout 阶段只处理 LayoutMask，对应 useLayoutEffect、
+  // class componentDidMount/Update、ref attach 等读取新 DOM 的副作用。
   const subtreeHasLayoutEffects =
     (finishedWork.subtreeFlags & LayoutMask) !== NoFlags;
   const rootHasLayoutEffect = (finishedWork.flags & LayoutMask) !== NoFlags;
@@ -3969,6 +4068,8 @@ function flushLayoutEffects(): void {
     const prevExecutionContext = executionContext;
     executionContext |= CommitContext;
     try {
+      // ReactSource: layout 阶段。此时 DOM 已经变更且 root.current 已经指向
+      // finishedWork，因此 effect/lifecycle 读取到的是提交后的宿主树。
       // The next phase is the layout phase, where we call effects that read
       // the host tree after it's been mutated. The idiomatic use case for this is
       // layout, but class component lifecycles also fire here for legacy reasons.
@@ -4032,10 +4133,13 @@ function flushSpawnedWork(): void {
     }
   }
 
+  // ReactSource: layout 阶段之后的收尾入口。这里会安排 paint、处理 passive
+  // effects 状态、错误上报、重新调度 root，以及同步冲刷 layout 中产生的更新。
   pendingEffectsStatus = NO_PENDING_EFFECTS;
 
   pendingViewTransition = null; // The view transition has now fully started.
 
+  // ReactSource: 告诉 Scheduler 当前帧末尾可以让浏览器有机会绘制。
   // Tell Scheduler to yield at the end of the frame, so the browser has an
   // opportunity to paint.
   requestPaint();
@@ -4050,6 +4154,8 @@ function flushSpawnedWork(): void {
     enableViewTransition && includesOnlyViewTransitionEligibleLanes(lanes)
       ? PassiveTransitionMask
       : PassiveMask;
+  // ReactSource: commit 主阶段结束后，检查本次是否有 passive effects。
+  // 有则进入 PENDING_PASSIVE_PHASE，稍后由 flushPassiveEffects 执行 useEffect。
   const rootDidHavePassiveEffects = // If this subtree rendered with profiling this commit, we need to visit it to log it.
     (enableProfilerTimer &&
       enableComponentPerformanceTrack &&
@@ -4072,6 +4178,7 @@ function flushSpawnedWork(): void {
     }
   }
 
+  // ReactSource: layout effects 可能触发了更新，所以这里重新读取 pendingLanes。
   // Read this again, since an effect might have updated it
   let remainingLanes = root.pendingLanes;
 
@@ -4111,6 +4218,8 @@ function flushSpawnedWork(): void {
   }
 
   if (recoverableErrors !== null) {
+    // ReactSource: render 阶段可恢复错误不会打断 UI 提交，而是在 commit 收尾阶段
+    // 统一调用 root.onRecoverableError 上报。
     const prevTransition = ReactSharedInternals.T;
     const previousUpdateLanePriority = getCurrentUpdatePriority();
     setCurrentUpdatePriority(DiscreteEventPriority);
@@ -4160,6 +4269,8 @@ function flushSpawnedWork(): void {
     }
   }
 
+  // ReactSource: 如果 passive effects 属于同步/离散更新，为了让外部系统立即可见，
+  // 会在当前任务尾部同步 flush；否则通常等到 paint 后再执行。
   // If the passive effects are the result of a discrete render, flush them
   // synchronously at the end of the current task so that the result is
   // immediately observable. Otherwise, we assume that they are not
@@ -4175,6 +4286,8 @@ function flushSpawnedWork(): void {
     flushPendingEffects();
   }
 
+  // ReactSource: commit 阶段内部可能产生新更新，例如 useLayoutEffect setState。
+  // 退出 commitRoot 前必须再次 ensureRootIsScheduled，确保这些更新会被调度。
   // Always call this before exiting `commitRoot`, to ensure that any
   // additional work on this root is scheduled.
   ensureRootIsScheduled(root);
@@ -4225,6 +4338,8 @@ function flushSpawnedWork(): void {
     flushHydrationEvents();
   }
 
+  // ReactSource: layout 阶段产生的同步更新在这里立刻冲刷。典型例子是
+  // componentDidMount/useLayoutEffect 中的 setState，不必等到下一轮事件循环。
   // If layout work was scheduled, flush it now.
   flushSyncWorkOnAllRoots();
 
@@ -4448,6 +4563,9 @@ export function flushPendingEffectsDelayed(): boolean {
 }
 
 export function flushPendingEffects(): boolean {
+  // ReactSource: React 19 的通用 pending effects 冲刷入口。它会按当前
+  // pendingEffectsStatus 依次推进 mutation/layout/spawned/passive 等阶段；
+  // 文章里的 flushPassiveEffects 是其中 passive 阶段的一部分。
   // Returns whether passive effects were flushed.
   if (enableViewTransition && pendingViewTransition !== null) {
     // If we forced a flush before the View Transition full started then we skip it.
@@ -4487,6 +4605,8 @@ function flushPassiveEffects(): boolean {
   // in the first place because we used to wrap it with
   // `Scheduler.runWithPriority`, which accepts a function. But now we track the
   // priority within React itself, so we can mutate the variable directly.
+  // ReactSource: 没有 PENDING_PASSIVE_PHASE 就表示没有待处理的 passive effects。
+  // 有的话，缓存 root/remaining lanes，并按 lanes 计算本次 passive effect 的优先级。
   // Cache the root since pendingEffectsRoot is cleared in
   // flushPassiveEffectsImpl
   const root = pendingEffectsRoot;
@@ -4496,6 +4616,8 @@ function flushPassiveEffects(): boolean {
   const remainingLanes = pendingEffectsRemainingLanes;
   pendingEffectsRemainingLanes = NoLanes;
 
+  // ReactSource: lane 优先级会转成事件优先级，再和 DefaultEventPriority 取较低者，
+  // 避免 useEffect 这种 passive 工作抢占更高优先级更新。
   const renderPriority = lanesToEventPriority(pendingEffectsLanes);
   const priority = lowerEventPriority(DefaultEventPriority, renderPriority);
   const prevTransition = ReactSharedInternals.T;
@@ -4520,6 +4642,8 @@ function flushPassiveEffectsImpl() {
   console.log(
     '[ReactSource:L3] flushPassiveEffectsImpl: passive effects 的实际执行体，处理卸载/挂载 effect',
   );
+  // ReactSource: passive effects 的实际执行体。它会清空 pending 状态，切到
+  // CommitContext，然后先执行 useEffect destroy，再执行 create。
   // Cache and clear the transitions flag
   const transitions = pendingPassiveTransitions;
   pendingPassiveTransitions = null;
@@ -4541,6 +4665,7 @@ function flushPassiveEffectsImpl() {
   }
 
   if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
+    // ReactSource: passive effects 不能在 render/commit 主流程重入执行。
     throw new Error('Cannot flush passive effects while already rendering.');
   }
 
@@ -4576,9 +4701,13 @@ function flushPassiveEffectsImpl() {
     markPassiveEffectsStarted(lanes);
   }
 
+  // ReactSource: passive effects 虽然通常在 paint 后异步执行，但语义上仍属于
+  // commit 相关工作，因此执行期间设置 CommitContext。
   const prevExecutionContext = executionContext;
   executionContext |= CommitContext;
 
+  // ReactSource: 先卸载旧 passive effects，再挂载新 passive effects。
+  // 对应 useEffect 的 cleanup 和 effect callback。
   commitPassiveUnmountEffects(root.current);
   commitPassiveMountEffects(
     root,

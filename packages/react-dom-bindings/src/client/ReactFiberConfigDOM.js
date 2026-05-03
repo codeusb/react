@@ -405,6 +405,8 @@ export function getPublicInstance(instance: Instance): Instance {
 }
 
 export function prepareForCommit(containerInfo: Container): Object | null {
+  // ReactSource: before mutation 前的 renderer 准备工作。React DOM 会记录当前
+  // 选择/焦点信息，并临时关闭事件系统，避免 DOM mutation 中途触发事件造成错乱。
   eventsEnabled = ReactBrowserEventEmitterIsEnabled();
   selectionInformation = getSelectionInformation(containerInfo);
   let activeInstance = null;
@@ -419,6 +421,8 @@ export function prepareForCommit(containerInfo: Container): Object | null {
 }
 
 export function beforeActiveInstanceBlur(internalInstanceHandle: Object): void {
+  // ReactSource: 如果当前焦点位于即将隐藏/删除的子树中，before mutation 阶段会
+  // 在真正 DOM 删除前派发 beforeblur 相关事件。
   if (enableCreateEventHandleAPI) {
     ReactBrowserEventEmitterSetEnabled(true);
     dispatchBeforeDetachedBlur(
@@ -486,6 +490,8 @@ export function createInstance(
   console.log(
     '[ReactSource:L1] Renderer: createInstance 由 react-dom 渲染器创建真实 DOM Element',
   );
+  // ReactSource: react-reconciler 不直接知道怎么创建 DOM，它通过 host config
+  // 调用 react-dom 的 createInstance。这里根据命名空间创建真实 Element。
   let hostContextProd: HostContextProd;
   if (__DEV__) {
     // TODO: take namespace into account when validating.
@@ -600,7 +606,10 @@ export function createInstance(
         }
       }
   }
+  // ReactSource: 把 Fiber 缓存在 DOM 节点上，事件系统和 DevTools 可以从 DOM
+  // 反查对应 Fiber。
   precacheFiberNode(internalInstanceHandle, domElement);
+  // ReactSource: 缓存当前 props，事件系统读取事件处理函数时会用到。
   updateFiberProps(domElement, props);
   return domElement;
 }
@@ -616,6 +625,8 @@ export function appendInitialChild(
   parentInstance: Instance,
   child: Instance | TextInstance,
 ): void {
+  // ReactSource: mount 阶段组装离屏 DOM 树。此时节点还没插入页面，
+  // 所以直接 appendChild 即可，不走移动逻辑。
   // Note: This should not use moveBefore() because initial are appended while disconnected.
   parentInstance.appendChild(child);
 }
@@ -629,6 +640,8 @@ export function finalizeInitialChildren(
   console.log(
     '[ReactSource:L3] finalizeInitialChildren: DOM 初次挂载属性完成后的收尾处理',
   );
+  // ReactSource: 设置 DOM 初始属性和事件监听。返回 true 代表还需要 commit
+  // 阶段执行一次额外效果，例如 autoFocus 或 img load 相关处理。
   setInitialProperties(domElement, type, props);
   switch (type) {
     case 'button':
@@ -665,6 +678,9 @@ export function finalizeHydratedChildren(
 }
 
 export function shouldSetTextContent(type: string, props: Props): boolean {
+  // ReactSource: HostComponent 的文本子节点优化。textarea/noscript、字符串、
+  // 数字、bigint 或 dangerouslySetInnerHTML 会直接设置 DOM textContent/innerHTML，
+  // 不再为 children 创建单独的 HostText Fiber。
   return (
     type === 'textarea' ||
     type === 'noscript' ||
@@ -925,9 +941,12 @@ export function commitUpdate(
   console.log(
     '[ReactSource:L3] commitUpdate: mutation 阶段提交 DOM 属性更新',
   );
+  // ReactSource: React 19 DOM mutation 路径中，completeWork 只 markUpdate；
+  // 这里才真正对比 oldProps/newProps 并更新 DOM 属性/事件。
   // Diff and update the properties.
   updateProperties(domElement, type, oldProps, newProps);
 
+  // ReactSource: 更新 DOM 节点缓存的 props，保证事件系统拿到最新 handler。
   // Update the props handle so that we know which props are the ones with
   // with current event handlers.
   updateFiberProps(domElement, newProps);
@@ -3437,6 +3456,8 @@ export function deleteChildFromFragmentInstance(
 }
 
 export function clearContainer(container: Container): void {
+  // ReactSource: HostRoot Snapshot 的宿主操作。它在真正插入新 DOM 前清空 root
+  // container；对 document/head/body 等特殊容器会更谨慎地保留必要节点。
   const nodeType = container.nodeType;
   if (nodeType === DOCUMENT_NODE) {
     clearContainerSparingly(container);

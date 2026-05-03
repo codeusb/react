@@ -345,6 +345,8 @@ export function commitBeforeMutationEffects(
   console.log(
     '[ReactSource:L1] commitBeforeMutationEffects: commit 的 before mutation 阶段，DOM 变更前遍历副作用',
   );
+  // ReactSource: before mutation 阶段入口。此时 DOM 还没被修改，renderer 先做
+  // commit 前准备：保存当前焦点/选择信息、临时禁用事件系统，并返回当前焦点 Fiber。
   focusedInstanceHandle = prepareForCommit(root.containerInfo);
   shouldFireAfterActiveInstanceBlur = false;
 
@@ -352,9 +354,11 @@ export function commitBeforeMutationEffects(
     enableViewTransition &&
     includesOnlyViewTransitionEligibleLanes(committedLanes);
 
+  // ReactSource: 从 rootFiber 开始，用 nextEffect 指针做深度优先遍历。
   nextEffect = firstChild;
   commitBeforeMutationEffects_begin(isViewTransitionEligible);
 
+  // ReactSource: before mutation 阶段结束后，不再需要追踪 active instance。
   // We no longer need to track the active instance fiber
   focusedInstanceHandle = null;
   // We've found any matched pairs and can now reset.
@@ -365,6 +369,8 @@ function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
   console.log(
     '[ReactSource:L2] commitBeforeMutationEffects_begin: before mutation 递阶段，寻找带 BeforeMutationMask 的 Fiber',
   );
+  // ReactSource: begin 是“递”阶段。它沿着 child 指针向下找包含
+  // BeforeMutationMask 的子树；React 19 在 ViewTransition 场景下会扩大 mask。
   // If this commit is eligible for a View Transition we look into all mutated subtrees.
   // TODO: We could optimize this by marking these with the Snapshot subtree flag in the render phase.
   const subtreeMask = isViewTransitionEligible
@@ -373,6 +379,8 @@ function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
   while (nextEffect !== null) {
     const fiber = nextEffect;
 
+    // ReactSource: 删除节点在真正 mutation 删除前，还能检查焦点是否位于将被删除
+    // 或隐藏的子树里，从而触发 beforeActiveInstanceBlur。
     // This phase is only used for beforeActiveInstanceBlur.
     // Let's skip the whole loop if it's off.
     if (enableCreateEventHandleAPI || isViewTransitionEligible) {
@@ -441,6 +449,7 @@ function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
 
     const child = fiber.child;
     if ((fiber.subtreeFlags & subtreeMask) !== NoFlags && child !== null) {
+      // ReactSource: 子树里有 before mutation 相关副作用，继续向 child 深入。
       child.return = fiber;
       nextEffect = child;
     } else {
@@ -451,6 +460,7 @@ function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
         // ViewTransitions. Therefore we need to find them inside.
         commitNestedViewTransitions(fiber);
       }
+      // ReactSource: 子树没有更深的 before mutation 副作用，开始当前分支的“归”阶段。
       commitBeforeMutationEffects_complete(isViewTransitionEligible);
     }
   }
@@ -464,15 +474,19 @@ function commitBeforeMutationEffects_complete(
   );
   while (nextEffect !== null) {
     const fiber = nextEffect;
+    // ReactSource: complete 是“归”阶段。自底向上对单个 Fiber 执行
+    // commitBeforeMutationEffectsOnFiber，例如 Snapshot/getSnapshotBeforeUpdate。
     commitBeforeMutationEffectsOnFiber(fiber, isViewTransitionEligible);
 
     const sibling = fiber.sibling;
     if (sibling !== null) {
+      // ReactSource: 有 sibling 就回到 begin 流程，继续遍历兄弟分支。
       sibling.return = fiber.return;
       nextEffect = sibling;
       return;
     }
 
+    // ReactSource: 没有 sibling 就向父 Fiber 冒泡。
     nextEffect = fiber.return;
   }
 }
@@ -529,6 +543,9 @@ function commitBeforeMutationEffectsOnFiber(
     case ClassComponent: {
       if ((flags & Snapshot) !== NoFlags) {
         if (current !== null) {
+          // ReactSource: before mutation 阶段里，类组件的 Snapshot flag 会触发
+          // getSnapshotBeforeUpdate。它必须在 DOM 修改前执行，返回值会留给
+          // layout 阶段的 componentDidUpdate 使用。
           commitClassSnapshot(finishedWork, current);
         }
       }
@@ -538,6 +555,8 @@ function commitBeforeMutationEffectsOnFiber(
       if ((flags & Snapshot) !== NoFlags) {
         if (supportsMutation) {
           const root = finishedWork.stateNode;
+          // ReactSource: HostRoot 的 Snapshot 用于清空容器。典型场景是根节点从
+          // 旧内容切到客户端渲染，需要在 mutation 插入新 DOM 前先清理 container。
           clearContainer(root.containerInfo);
         }
       }
@@ -621,12 +640,15 @@ function commitLayoutEffectOnFiber(
     case FunctionComponent:
     case ForwardRef:
     case SimpleMemoComponent: {
+      // ReactSource: layout 阶段先递归处理子 Fiber 的 layout 副作用。
       recursivelyTraverseLayoutEffects(
         finishedRoot,
         finishedWork,
         committedLanes,
       );
       if (flags & Update) {
+        // ReactSource: 函数组件在这里执行 useLayoutEffect 的 create。
+        // 对应 destroy 已经在 mutation 阶段先执行完，避免兄弟 effect 互相干扰。
         commitHookLayoutEffects(finishedWork, HookLayout | HookHasEffect);
       }
       break;
@@ -638,14 +660,18 @@ function commitLayoutEffectOnFiber(
         committedLanes,
       );
       if (flags & Update) {
+        // ReactSource: 类组件 layout 生命周期入口：
+        // mount 执行 componentDidMount，update 执行 componentDidUpdate。
         commitClassLayoutLifecycles(finishedWork, current);
       }
 
       if (flags & Callback) {
+        // ReactSource: 执行 setState/updateQueue 中收集的回调。
         commitClassCallbacks(finishedWork);
       }
 
       if (flags & Ref) {
+        // ReactSource: layout 阶段绑定新 ref，此时 DOM mutation 已完成，可以拿到最新实例。
         safelyAttachRef(finishedWork, finishedWork.return);
       }
       break;
@@ -658,6 +684,7 @@ function commitLayoutEffectOnFiber(
         committedLanes,
       );
       if (flags & Callback) {
+        // ReactSource: HostRoot 的 updateQueue callback 也在 layout 阶段执行。
         commitRootCallbacks(finishedWork);
       }
       if (enableProfilerTimer && enableProfilerCommitHooks) {
@@ -698,6 +725,7 @@ function commitLayoutEffectOnFiber(
       // aka when there is no current/alternate.
       if (current === null) {
         if (flags & Update) {
+          // ReactSource: 宿主节点首次挂载后的特殊处理，例如表单元素 autoFocus。
           commitHostMount(finishedWork);
         } else if (flags & Hydrate) {
           commitHostHydratedInstance(finishedWork);
@@ -705,6 +733,7 @@ function commitLayoutEffectOnFiber(
       }
 
       if (flags & Ref) {
+        // ReactSource: HostComponent 的 ref 在 DOM 已经插入/更新后绑定。
         safelyAttachRef(finishedWork, finishedWork.return);
       }
       break;
@@ -1366,6 +1395,8 @@ function commitDeletionEffects(
     // TODO: Instead of searching up the fiber return path on every deletion, we
     // can track the nearest host component on the JS stack as we traverse the
     // tree during the commit phase. This would make insertions faster, too.
+    // ReactSource: 删除真实 DOM 前，先沿 return 指针向上找到最近的宿主父节点。
+    // HostComponent 对应普通 DOM 父节点，HostRoot/HostPortal 对应容器。
     let parent: null | Fiber = returnFiber;
     findParent: while (parent !== null) {
       switch (parent.tag) {
@@ -1401,6 +1432,8 @@ function commitDeletionEffects(
       );
     }
 
+    // ReactSource: 找到宿主父节点后，再深度遍历被删除子树。
+    // 这一步会解绑 ref、执行卸载生命周期/layout destroy，并删除最外层宿主节点。
     commitDeletionEffectsOnFiber(root, returnFiber, deletedFiber);
     hostParent = null;
     hostParentIsContainer = false;
@@ -1426,6 +1459,7 @@ function commitDeletionEffects(
   }
   popComponentEffectStart(prevEffectStart);
 
+  // ReactSource: mutation 阶段最后断开 Fiber 指针，避免已删除 Fiber 继续保留树关系。
   detachFiberMutation(deletedFiber);
 }
 
@@ -1440,6 +1474,7 @@ function recursivelyTraverseDeletionEffects(
   // TODO: Use a static flag to skip trees that don't have unmount effects
   let child = parent.child;
   while (child !== null) {
+    // ReactSource: 删除子树也按 Fiber 子链表逐个处理，每个节点再按 tag 执行自己的卸载逻辑。
     commitDeletionEffectsOnFiber(finishedRoot, nearestMountedAncestor, child);
     child = child.sibling;
   }
@@ -1517,6 +1552,7 @@ function commitDeletionEffectsOnFiber(
       // Fall through
     }
     case HostComponent: {
+      // ReactSource: 删除 DOM 节点前先解绑宿主节点 ref。
       if (!offscreenSubtreeWasHidden) {
         safelyDetachRef(deletedFiber, nearestMountedAncestor);
       }
@@ -1532,6 +1568,8 @@ function commitDeletionEffectsOnFiber(
       if (supportsMutation) {
         const prevHostParent = hostParent;
         const prevHostParentIsContainer = hostParentIsContainer;
+        // ReactSource: 遇到 HostComponent/HostText 后，下面更深层的 DOM 节点不再单独 remove。
+        // React 只删除当前这条分支最外层的宿主节点，其子 DOM 会随父节点一起离开。
         hostParent = null;
         recursivelyTraverseDeletionEffects(
           finishedRoot,
@@ -1545,6 +1583,7 @@ function commitDeletionEffectsOnFiber(
           // Now that all the child effects have unmounted, we can remove the
           // node from the tree.
           if (hostParentIsContainer) {
+            // ReactSource: 父节点是 root/portal 容器时，从 container 中删除宿主节点。
             commitHostRemoveChildFromContainer(
               deletedFiber,
               nearestMountedAncestor,
@@ -1552,6 +1591,7 @@ function commitDeletionEffectsOnFiber(
               (deletedFiber.stateNode: Instance | TextInstance),
             );
           } else {
+            // ReactSource: 父节点是普通 DOM 时，从父 DOM 中删除宿主节点。
             commitHostRemoveChild(
               deletedFiber,
               nearestMountedAncestor,
@@ -1650,6 +1690,7 @@ function commitDeletionEffectsOnFiber(
         !offscreenSubtreeWasHidden
       ) {
         // TODO: Use a commitHookInsertionUnmountEffects wrapper to record timings.
+        // ReactSource: 函数组件删除时，先清理 useInsertionEffect 的 destroy。
         commitHookEffectListUnmount(
           HookInsertion,
           deletedFiber,
@@ -1657,6 +1698,7 @@ function commitDeletionEffectsOnFiber(
         );
       }
       if (!offscreenSubtreeWasHidden) {
+        // ReactSource: 再清理 useLayoutEffect 的 destroy；passive effect 会在 passive 阶段处理。
         commitHookLayoutUnmountEffects(
           deletedFiber,
           nearestMountedAncestor,
@@ -1672,6 +1714,7 @@ function commitDeletionEffectsOnFiber(
     }
     case ClassComponent: {
       if (!offscreenSubtreeWasHidden) {
+        // ReactSource: 类组件删除时，解绑 ref 后执行 componentWillUnmount。
         safelyDetachRef(deletedFiber, nearestMountedAncestor);
         const instance = deletedFiber.stateNode;
         if (typeof instance.componentWillUnmount === 'function') {
@@ -1981,6 +2024,8 @@ export function commitMutationEffects(
 
   resetComponentEffectTimers();
 
+  // ReactSource: 从 finishedWork(rootFiber) 开始提交 mutation 副作用。
+  // 这一阶段会真正触碰宿主环境：插入、删除、更新 DOM，解绑旧 ref。
   commitMutationEffectsOnFiber(finishedWork, root, committedLanes);
 
   inProgressLanes = null;
@@ -2001,6 +2046,7 @@ function recursivelyTraverseMutationEffects(
   if (deletions !== null) {
     for (let i = 0; i < deletions.length; i++) {
       const childToDelete = deletions[i];
+      // ReactSource: 删除副作用优先处理，确保子树卸载发生在后续子 mutation/layout effect 之前。
       commitDeletionEffects(root, parentFiber, childToDelete);
     }
   }
@@ -2008,6 +2054,7 @@ function recursivelyTraverseMutationEffects(
   if (parentFiber.subtreeFlags & (MutationMask | Cloned)) {
     let child = parentFiber.child;
     while (child !== null) {
+      // ReactSource: 只有子树带 MutationMask/Cloned 时才下钻，避免无副作用子树的无意义遍历。
       commitMutationEffectsOnFiber(child, root, lanes);
       child = child.sibling;
     }
@@ -2043,6 +2090,8 @@ function commitMutationEffectsOnFiber(
       commitReconciliationEffects(finishedWork, lanes);
 
       if (flags & Update) {
+        // ReactSource: mutation 阶段先执行 useInsertionEffect 的销毁/创建。
+        // useLayoutEffect 的销毁也在 mutation 阶段完成，新的 layout create 留到 layout 阶段。
         commitHookEffectListUnmount(
           HookInsertion | HookHasEffect,
           finishedWork,
@@ -2064,6 +2113,7 @@ function commitMutationEffectsOnFiber(
 
       if (flags & Ref) {
         if (!offscreenSubtreeWasHidden && current !== null) {
+          // ReactSource: ref 的旧值要在 DOM mutation 阶段解绑，新的 ref 会在 layout 阶段绑定。
           safelyDetachRef(current, current.return);
         }
       }
@@ -2176,6 +2226,8 @@ function commitMutationEffectsOnFiber(
     case HostComponent: {
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
 
+      // ReactSource: 先处理子树 mutation，再提交当前 HostComponent 自己的 Placement。
+      // 这样插入当前节点时，其子 DOM 已经在 completeWork 阶段准备好或在子提交中处理好。
       commitReconciliationEffects(finishedWork, lanes);
 
       if (flags & Ref) {
@@ -2191,6 +2243,7 @@ function commitMutationEffectsOnFiber(
         // rely on mutating the flag during commit. Like by setting a flag
         // during the render phase instead.
         if (finishedWork.flags & ContentReset) {
+          // ReactSource: ContentReset 表示父 DOM 文本内容需要先清空，再插入/更新子节点。
           commitHostResetTextContent(finishedWork);
         }
 
@@ -2204,6 +2257,8 @@ function commitMutationEffectsOnFiber(
             const newProps = finishedWork.memoizedProps;
             const oldProps =
               current !== null ? current.memoizedProps : newProps;
+            // ReactSource: HostComponent 的 DOM 属性更新在 React 19 走 commitHostUpdate，
+            // 旧版文章里的 updatePayload 已经被当前 Host Config 的 diff/update 路径封装掉了。
             commitHostUpdate(finishedWork, newProps, oldProps);
           }
         }
@@ -2258,6 +2313,7 @@ function commitMutationEffectsOnFiber(
           const oldText: string =
             current !== null ? current.memoizedProps : newText;
 
+          // ReactSource: 文本 Fiber 的 Update 副作用会直接更新真实 Text 节点内容。
           commitHostTextUpdate(finishedWork, newText, oldText);
         }
       }
@@ -2700,14 +2756,18 @@ function commitReconciliationEffects(
   // before the effects on this fiber have fired.
   const flags = finishedWork.flags;
   if (flags & Placement) {
+    // ReactSource: Placement 表示当前 Fiber 对应的宿主节点需要插入或移动。
+    // 当前版本实际委托给 ReactFiberCommitHostEffects 的 commitHostPlacement。
     commitHostPlacement(finishedWork);
     // Clear the "placement" from effect tag so that we know that this is
     // inserted, before any life-cycles like componentDidMount gets called.
     // TODO: findDOMNode doesn't rely on this any more but isMounted does
     // and isMounted is deprecated anyway so we should be able to kill this.
+    // ReactSource: 插入完成后清掉 Placement，避免后续生命周期/查询误判为未挂载。
     finishedWork.flags &= ~Placement;
   }
   if (flags & Hydrating) {
+    // ReactSource: Hydrating 也是一次性提交标记，提交后清除。
     finishedWork.flags &= ~Hydrating;
   }
 }
@@ -2923,6 +2983,8 @@ export function commitLayoutEffects(
   resetComponentEffectTimers();
 
   const current = finishedWork.alternate;
+  // ReactSource: 当前 React 19 不再使用旧文章里的 commitLayoutEffects_begin/complete 两个函数名；
+  // 这里直接从 rootFiber 进入 commitLayoutEffectOnFiber，再由 recursivelyTraverseLayoutEffects 递归下钻。
   commitLayoutEffectOnFiber(root, current, finishedWork, committedLanes);
 
   inProgressLanes = null;
@@ -2941,6 +3003,7 @@ function recursivelyTraverseLayoutEffects(
     let child = parentFiber.child;
     while (child !== null) {
       const current = child.alternate;
+      // ReactSource: 等价于旧版 complete 逻辑中的“找到带 LayoutMask 的 Fiber 后处理自身”。
       commitLayoutEffectOnFiber(root, current, child, lanes);
       child = child.sibling;
     }
@@ -3485,6 +3548,9 @@ function recursivelyTraversePassiveMountEffects(
   committedTransitions: Array<Transition> | null,
   endTime: number, // Profiling-only. The start time of the next Fiber or root completion.
 ) {
+  console.log(
+    '[ReactSource:L3] recursivelyTraversePassiveMountEffects: passive mount 阶段递归寻找 useEffect',
+  );
   const isViewTransitionEligible =
     enableViewTransition &&
     includesOnlyViewTransitionEligibleLanes(committedLanes);
@@ -3503,6 +3569,7 @@ function recursivelyTraversePassiveMountEffects(
   ) {
     let child = parentFiber.child;
     while (child !== null) {
+      // ReactSource: passive mount 也按 Fiber 子链表深度遍历，找到带 Passive flag 的函数组件。
       if (enableProfilerTimer && enableComponentPerformanceTrack) {
         const nextSibling = child.sibling;
         commitPassiveMountOnFiber(
@@ -3544,6 +3611,9 @@ function commitPassiveMountOnFiber(
   committedTransitions: Array<Transition> | null,
   endTime: number, // Profiling-only. The start time of the next Fiber or root completion.
 ): void {
+  console.log(
+    '[ReactSource:L2] commitPassiveMountOnFiber: passive mount 阶段处理单个 Fiber',
+  );
   const prevEffectStart = pushComponentEffectStart();
   const prevEffectDuration = pushComponentEffectDuration();
   const prevEffectErrors = pushComponentEffectErrors();
@@ -3605,6 +3675,7 @@ function commitPassiveMountOnFiber(
         endTime,
       );
       if (flags & Passive) {
+        // ReactSource: 函数组件带 Passive flag 时，在这里执行 useEffect 的 create。
         commitHookPassiveMountEffects(
           finishedWork,
           HookPassive | HookHasEffect,
@@ -4549,6 +4620,9 @@ function commitAtomicPassiveEffects(
 }
 
 export function commitPassiveUnmountEffects(finishedWork: Fiber): void {
+  console.log(
+    '[ReactSource:L2] commitPassiveUnmountEffects: passive unmount 阶段，进入 useEffect 卸载链路',
+  );
   resetComponentEffectTimers();
   commitPassiveUnmountOnFiber(finishedWork);
 }
@@ -4766,6 +4840,9 @@ function detachAlternateSiblings(parentFiber: Fiber) {
 }
 
 function recursivelyTraversePassiveUnmountEffects(parentFiber: Fiber): void {
+  console.log(
+    '[ReactSource:L3] recursivelyTraversePassiveUnmountEffects: passive unmount 阶段递归遍历子树',
+  );
   // Deletions effects can be scheduled on any fiber type. They need to happen
   // before the children effects have fired.
   const deletions = parentFiber.deletions;
@@ -4776,6 +4853,7 @@ function recursivelyTraversePassiveUnmountEffects(parentFiber: Fiber): void {
         const childToDelete = deletions[i];
         const prevEffectStart = pushComponentEffectStart();
         // TODO: Convert this to use recursion
+        // ReactSource: 被删除子树的 passive destroy 要单独遍历，保证卸载 useEffect。
         nextEffect = childToDelete;
         commitPassiveUnmountEffectsInsideOfDeletedTree_begin(
           childToDelete,
@@ -4813,6 +4891,9 @@ function recursivelyTraversePassiveUnmountEffects(parentFiber: Fiber): void {
 }
 
 function commitPassiveUnmountOnFiber(finishedWork: Fiber): void {
+  console.log(
+    '[ReactSource:L2] commitPassiveUnmountOnFiber: passive unmount 阶段处理单个 Fiber',
+  );
   const prevEffectStart = pushComponentEffectStart();
   const prevEffectDuration = pushComponentEffectDuration();
   const prevEffectErrors = pushComponentEffectErrors();
@@ -4823,6 +4904,7 @@ function commitPassiveUnmountOnFiber(finishedWork: Fiber): void {
     case SimpleMemoComponent: {
       recursivelyTraversePassiveUnmountEffects(finishedWork);
       if (finishedWork.flags & Passive) {
+        // ReactSource: 函数组件带 Passive flag 时，在这里执行 useEffect 的 destroy。
         commitHookPassiveUnmountEffects(
           finishedWork,
           finishedWork.return,

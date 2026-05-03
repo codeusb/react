@@ -247,11 +247,16 @@ function appendAllChildren(
     '[ReactSource:L3] appendAllChildren: completeWork mount 阶段把子孙 DOM 节点挂到当前 DOM 节点',
   );
   if (supportsMutation) {
+    // ReactSource: mount 阶段的 DOM 组装。completeWork 先自底向上创建子孙
+    // HostComponent/HostText 的 stateNode，再由父 HostComponent 在这里把所有
+    // 终端 DOM 节点 append 到自己的 DOM 节点上。
     // We only have the top Fiber that was created but we need recurse down its
     // children to find all the terminal nodes.
     let node = workInProgress.child;
     while (node !== null) {
       if (node.tag === HostComponent || node.tag === HostText) {
+        // ReactSource: 只有 HostComponent / HostText 才对应真实 DOM 节点，
+        // 函数组件、Fragment 等只是 Fiber 结构，需要继续向下找终端节点。
         appendInitialChild(parent, node.stateNode);
       } else if (
         node.tag === HostPortal ||
@@ -262,6 +267,7 @@ function appendAllChildren(
         // the portal directly.
         // If we have a HostSingleton it will be placed independently
       } else if (node.child !== null) {
+        // ReactSource: 非宿主节点但有 child，则深入子树继续找真实 DOM。
         node.child.return = node;
         node = node.child;
         continue;
@@ -277,6 +283,7 @@ function appendAllChildren(
         }
         node = node.return;
       }
+      // ReactSource: 当前分支走完后，转向下一个 sibling，继续深度优先收集 DOM。
       // $FlowFixMe[incompatible-use] found when upgrading Flow
       node.sibling.return = node.return;
       node = node.sibling;
@@ -464,15 +471,22 @@ function updateHostComponent(
     '[ReactSource:L2] completeWork.updateHostComponent: update 阶段处理 DOM 属性 diff 和更新标记',
   );
   if (supportsMutation) {
+    // ReactSource: React 19 的 mutation 渲染器这里不再像 React 18 教程那样
+    // 生成 updatePayload 数组，而是只给 Fiber 打 Update flag；真正 props diff
+    // 会在 commit 阶段的 commitUpdate -> updateProperties 中执行。
     // If we have an alternate, that means this is an update and we need to
     // schedule a side-effect to do the updates.
     const oldProps = current.memoizedProps;
     if (oldProps === newProps) {
+      // ReactSource: props 引用完全相同，当前 DOM 节点本身不需要更新。
+      // 即使 children 有变化，也会由子 Fiber 自己的 flags 在 commit 阶段处理。
       // In mutation mode, this is sufficient for a bailout because
       // we won't touch this node even if children changed.
       return;
     }
 
+    // ReactSource: 标记当前 HostComponent 在 commit mutation 阶段需要执行
+    // DOM 属性更新。
     markUpdate(workInProgress);
   } else if (supportsPersistence) {
     const currentInstance = current.stateNode;
@@ -766,6 +780,9 @@ function cutOffTailIfNeeded(
 }
 
 function bubbleProperties(completedWork: Fiber) {
+  // ReactSource: completeWork 的最后一步通常会调用 bubbleProperties。
+  // 它把子 Fiber 链上的 lanes、childLanes、flags、subtreeFlags 汇总到父 Fiber，
+  // 这样 commit 阶段可以通过 subtreeFlags 快速跳过没有副作用的子树。
   const didBailout =
     completedWork.alternate !== null &&
     completedWork.alternate.child === completedWork.child;
@@ -788,6 +805,7 @@ function bubbleProperties(completedWork: Fiber) {
           mergeLanes(child.lanes, child.childLanes),
         );
 
+        // ReactSource: 子树自己的副作用和子 Fiber 本身的副作用都要向父级冒泡。
         subtreeFlags |= child.subtreeFlags;
         subtreeFlags |= child.flags;
 
@@ -1060,6 +1078,9 @@ function completeWork(
   console.log(
     '[ReactSource:L1] completeWork: render 归阶段核心，创建真实 DOM 或收集更新副作用',
   );
+  // ReactSource: completeWork 和 beginWork 类似，也通过 Fiber tag 分发。
+  // 对函数组件等无真实 DOM 的 Fiber，主要是冒泡 flags；对 HostComponent，
+  // mount 时创建 DOM，update 时标记 DOM 更新。
   const newProps = workInProgress.pendingProps;
   // Note: This intentionally doesn't check if we're hydrating because comparing
   // to the current tree provider fiber is just as fast and less error-prone.
@@ -1347,6 +1368,8 @@ function completeWork(
       popHostContext(workInProgress);
       const type = workInProgress.type;
       if (current !== null && workInProgress.stateNode != null) {
+        // ReactSource: update 阶段。stateNode 已经存在，completeWork 不创建 DOM，
+        // 只比较 props 是否变了并给 Fiber 打更新标记。
         updateHostComponent(
           current,
           workInProgress,
@@ -1380,6 +1403,7 @@ function completeWork(
         // bottom->up. Top->down is faster in IE11.
         const wasHydrated = popHydrationState(workInProgress);
         if (wasHydrated) {
+          // ReactSource: hydration 路径复用服务端已有 DOM，并在需要时标记 Hydrate。
           // TODO: Move this and createInstance step into the beginPhase
           // to consolidate.
           prepareToHydrateHostInstance(workInProgress, currentHostContext);
@@ -1395,6 +1419,7 @@ function completeWork(
           }
         } else {
           const rootContainerInstance = getRootHostContainer();
+          // ReactSource: mount 阶段。为 HostComponent Fiber 创建真实 DOM 节点。
           const instance = createInstance(
             type,
             newProps,
@@ -1405,13 +1430,18 @@ function completeWork(
           // TODO: For persistent renderers, we should pass children as part
           // of the initial instance creation
           markCloned(workInProgress);
+          // ReactSource: 子孙 DOM 已经在各自 completeWork 中创建好，这里把它们
+          // 追加到当前 DOM 节点下，形成离屏的 DOM 子树。
           appendAllChildren(instance, workInProgress, false, false);
+          // ReactSource: Fiber.stateNode 保存对应真实 DOM，commit 阶段会用它插入页面。
           workInProgress.stateNode = instance;
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
           if (
+            // ReactSource: 初始化 DOM 属性/事件，并根据 autoFocus/img 等返回值决定
+            // 是否需要在 commit 阶段额外执行 Update effect。
             finalizeInitialChildren(
               instance,
               type,
@@ -1423,6 +1453,8 @@ function completeWork(
           }
         }
       }
+      // ReactSource: HostComponent 完成后，向父 Fiber 冒泡本节点和子树的
+      // flags / lanes，供 commit 阶段快速定位副作用。
       bubbleProperties(workInProgress);
       if (enableViewTransition) {
         // Host Components act as their own View Transitions which doesn't run enter/exit animations.

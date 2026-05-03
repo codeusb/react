@@ -191,6 +191,8 @@ export function createFiberRoot(
   console.log(
     '[ReactSource:L1] createFiberRoot: 创建 FiberRoot，并把 HostRoot Fiber 与 root.current 双向关联',
   );
+  // 1. 创建 FiberRootNode。它代表整个 React 应用根，保存 containerInfo、
+  // pendingLanes、callbackNode、缓存、错误处理回调等根级状态。
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,
@@ -211,12 +213,19 @@ export function createFiberRoot(
     root.transitionCallbacks = transitionCallbacks;
   }
 
+  // 2. 创建 HostRoot Fiber，也叫 RootFiber。
+  // 它是整棵 Fiber 树的根节点，不是用户 JSX 生成的组件 Fiber。
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
   const uninitializedFiber = createHostRootFiber(tag, isStrictMode);
+
+  // 3. 建立 FiberRootNode 与 HostRoot Fiber 的双向关联：
+  // root.current -> HostRoot Fiber
+  // HostRoot Fiber.stateNode -> FiberRootNode
   root.current = uninitializedFiber;
   uninitializedFiber.stateNode = root;
 
+  // 4. 初始化根缓存。当前版本默认启用 cache，因此比 React 18.2 示例更直接。
   const initialCache = createCache();
   retainCache(initialCache);
 
@@ -230,12 +239,15 @@ export function createFiberRoot(
   root.pooledCache = initialCache;
   retainCache(initialCache);
   const initialState: RootState = {
+    // 初始化阶段普通 createRoot 传入的 initialChildren 是 null；
+    // root.render(<App />) 后，update.payload.element 才会成为真正要渲染的 element。
     element: initialChildren,
     isDehydrated: hydrate,
     cache: initialCache,
   };
   uninitializedFiber.memoizedState = initialState;
 
+  // 5. 初始化 HostRoot Fiber 的更新队列，后续 updateContainer 会把 update 入队到这里。
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

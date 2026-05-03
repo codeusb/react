@@ -117,6 +117,9 @@ export function ensureRootIsScheduled(root: FiberRoot): void {
   console.log(
     '[ReactSource:L1] ensureRootIsScheduled: 确保 root 进入调度队列，并安排微任务处理后续 work',
   );
+  // ReactSource: 对应 React 18 教程里“注册调度任务”的入口。React 19 把
+  // 具体优先级选择拆到 scheduleTaskForRootDuringMicrotask；这里先确保 root
+  // 进入全局 root schedule，并安排一个微任务统一处理。
   // This function is called whenever a root receives an update. It does two
   // things 1) it ensures the root is in the root schedule, and 2) it ensures
   // there's a pending microtask to process the root schedule.
@@ -260,6 +263,8 @@ function processRootScheduleInImmediateTask() {
 }
 
 function processRootScheduleInMicrotask() {
+  // ReactSource: root 调度队列真正被处理的地方。一个微任务会遍历所有
+  // scheduled roots，为每个 root 选择下一批 lanes，并决定是否安排 Scheduler task。
   // This function is always called inside a microtask. It should never be
   // called synchronously.
   didScheduleMicrotask = false;
@@ -293,6 +298,8 @@ function processRootScheduleInMicrotask() {
   let root = firstScheduledRoot;
   while (root !== null) {
     const next = root.next;
+    // ReactSource: 这里相当于旧文章里的 ensureRootIsScheduled 后半段：
+    // 计算 nextLanes，必要时注册 performWorkOnRootViaSchedulerTask。
     const nextLanes = scheduleTaskForRootDuringMicrotask(root, currentTime);
     if (nextLanes === NoLane) {
       // This root has no more pending work. Remove it from the schedule. To
@@ -388,6 +395,8 @@ function scheduleTaskForRootDuringMicrotask(
   root: FiberRoot,
   currentTime: number,
 ): Lane {
+  // ReactSource: 这个函数不直接 render，只负责“挑 lanes + 安排任务”。
+  // 同步任务会留到微任务尾部 flush；并发任务会交给 Scheduler。
   // This function is always called inside a microtask, or at the very end of a
   // rendering task right before we yield to the main thread. It should never be
   // called synchronously.
@@ -395,10 +404,14 @@ function scheduleTaskForRootDuringMicrotask(
   // This function also never performs React work synchronously; it should
   // only schedule work to be performed later, in a separate task or microtask.
 
+  // ReactSource: 防止低优先级 lane 长期被高优先级任务饿死，必要时把它们标记
+  // 为 expired，这样下一次 getNextLanes 会提高它们的处理机会。
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
   markStarvedLanesAsExpired(root, currentTime);
 
+  // ReactSource: 从 root.pendingLanes 中选出下一批要 render 的 lanes。
+  // 这是 Lane 优先级系统真正开始发挥作用的位置之一。
   // Determine the next lanes to work on, and their priority.
   const rootWithPendingPassiveEffects = getRootWithPendingPassiveEffects();
   const pendingPassiveEffectsLanes = getPendingPassiveEffectsLanes();
@@ -432,6 +445,8 @@ function scheduleTaskForRootDuringMicrotask(
     // Suspended commit phase
     root.cancelPendingCommit !== null
   ) {
+    // ReactSource: 没有 work，或当前 root 正在等待 Suspense/commit 结果，
+    // 就取消已有 callback，并把 root 从后续调度中清理掉。
     // Fast path: There's nothing to work on.
     if (existingCallbackNode !== null) {
       cancelCallback(existingCallbackNode);
@@ -449,6 +464,8 @@ function scheduleTaskForRootDuringMicrotask(
     // the main thread.
     !checkIfRootIsPrerendering(root, nextLanes)
   ) {
+    // ReactSource: 同步 lane 不再额外注册 Scheduler task；它会在当前微任务
+    // 末尾由 flushSyncWorkAcrossRoots_impl 直接调用 performSyncWorkOnRoot。
     // Synchronous work is always flushed at the end of the microtask, so we
     // don't need to schedule an additional task.
     if (existingCallbackNode !== null) {
@@ -458,6 +475,8 @@ function scheduleTaskForRootDuringMicrotask(
     root.callbackNode = null;
     return SyncLane;
   } else {
+    // ReactSource: 并发/非同步任务会比较新旧 callback priority。优先级没变就
+    // 复用旧任务，避免重复注册 Scheduler callback。
     // We use the highest priority lane to represent the priority of the callback.
     const existingCallbackPriority = root.callbackPriority;
     const newCallbackPriority = getHighestPriorityLane(nextLanes);
@@ -480,6 +499,8 @@ function scheduleTaskForRootDuringMicrotask(
       cancelCallback(existingCallbackNode);
     }
 
+    // ReactSource: Lane 优先级会被映射成 Scheduler 优先级，最后由 Scheduler
+    // 决定任务何时执行、何时让出主线程。
     let schedulerPriorityLevel;
     switch (lanesToEventPriority(nextLanes)) {
       // Scheduler does have an "ImmediatePriority", but now that we use
@@ -500,6 +521,8 @@ function scheduleTaskForRootDuringMicrotask(
         break;
     }
 
+    // ReactSource: 把 performWorkOnRootViaSchedulerTask 放入 Scheduler 队列。
+    // 这就是旧文档中 performConcurrentWorkOnRoot 被调度执行的对应位置。
     const newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
       performWorkOnRootViaSchedulerTask.bind(null, root),
@@ -520,6 +543,8 @@ function performWorkOnRootViaSchedulerTask(
   console.log(
     '[ReactSource:L1] performConcurrentWorkOnRoot: 当前版本对应的并发调度入口，经 Scheduler 执行 root work',
   );
+  // ReactSource: React 19 当前对应旧文档里的 performConcurrentWorkOnRoot。
+  // Scheduler 执行到这个 callback 后，才真正进入 performWorkOnRoot。
   // This is the entry point for concurrent tasks scheduled via Scheduler (and
   // postTask, in the future).
 
@@ -546,6 +571,8 @@ function performWorkOnRootViaSchedulerTask(
     return null;
   }
 
+  // ReactSource: render 前先 flush passive effects，因为 useEffect 里可能又
+  // schedule update，导致当前 root 的优先级和 lanes 发生变化。
   // Flush any pending passive effects before deciding which lanes to work on,
   // in case they schedule additional work.
   const originalCallbackNode = root.callbackNode;
@@ -563,6 +590,8 @@ function performWorkOnRootViaSchedulerTask(
     }
   }
 
+  // ReactSource: Scheduler task 真正开始时会重新取一次 nextLanes。因为从注册
+  // callback 到执行 callback 之间，可能又有新的更新进入同一个 root。
   // Determine the next lanes to work on, using the fields stored on the root.
   // TODO: We already called getNextLanes when we scheduled the callback; we
   // should be able to avoid calling it again by stashing the result on the
@@ -588,6 +617,8 @@ function performWorkOnRootViaSchedulerTask(
     return null;
   }
 
+  // ReactSource: 进入 work loop。performWorkOnRoot 会选择 renderRootConcurrent
+  // 或 renderRootSync，并在 render 完成后推动 commit。
   // Enter the work loop.
   // TODO: We only check `didTimeout` defensively, to account for a Scheduler
   // bug we're still investigating. Once the bug in Scheduler is fixed,
@@ -595,6 +626,8 @@ function performWorkOnRootViaSchedulerTask(
   const forceSync = !disableSchedulerTimeoutInWorkLoop && didTimeout;
   performWorkOnRoot(root, lanes, forceSync);
 
+  // ReactSource: 如果并发 render 中途让出执行权，这里会重新计算是否还要续约
+  // 当前 Scheduler task；需要继续就返回 continuation。
   // The work loop yielded, but there may or may not be work left at the current
   // priority. Need to determine whether we need to schedule a continuation.
   // Usually `scheduleTaskForRootDuringMicrotask` only runs inside a microtask;
@@ -615,6 +648,8 @@ function performSyncWorkOnRoot(root: FiberRoot, lanes: Lanes) {
   console.log(
     '[ReactSource:L1] performSyncWorkOnRoot: 同步任务入口，不经 Scheduler 时间切片，直接执行 root work',
   );
+  // ReactSource: 同步任务入口。它不经过 Scheduler 时间切片，而是 flush passive
+  // effects 后强制以 forceSync=true 进入 performWorkOnRoot。
   // This is the entry point for synchronous tasks that don't go
   // through Scheduler.
   const didFlushPassiveEffects = flushPendingEffects();

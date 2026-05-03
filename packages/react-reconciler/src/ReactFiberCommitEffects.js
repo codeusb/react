@@ -98,6 +98,9 @@ export function commitHookLayoutEffects(
   finishedWork: Fiber,
   hookFlags: HookFlags,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHookLayoutEffects: layout 阶段执行 useLayoutEffect create',
+  );
   // At this point layout effects have already been destroyed (during mutation phase).
   // This is done to prevent sibling component effects from interfering with each other,
   // e.g. a destroy function in one component should never override a ref set
@@ -116,6 +119,9 @@ export function commitHookLayoutUnmountEffects(
   nearestMountedAncestor: null | Fiber,
   hookFlags: HookFlags,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHookLayoutUnmountEffects: mutation 阶段执行 useLayoutEffect destroy',
+  );
   // Layout effects are destroyed during the mutation phase so that all
   // destroy functions for all fibers are called before any create functions.
   // This prevents sibling component effects from interfering with each other,
@@ -253,6 +259,9 @@ export function commitHookEffectListUnmount(
   finishedWork: Fiber,
   nearestMountedAncestor: Fiber | null,
 ) {
+  console.log(
+    '[ReactSource:L3] commitHookEffectListUnmount: 遍历 Hook effect 链表并执行 destroy',
+  );
   try {
     const updateQueue: FunctionComponentUpdateQueue | null =
       (finishedWork.updateQueue: any);
@@ -308,6 +317,9 @@ export function commitHookPassiveMountEffects(
   finishedWork: Fiber,
   hookFlags: HookFlags,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHookPassiveMountEffects: passive 阶段执行 useEffect create',
+  );
   if (shouldProfile(finishedWork)) {
     startEffectTimer();
     commitHookEffectListMount(hookFlags, finishedWork);
@@ -322,6 +334,9 @@ export function commitHookPassiveUnmountEffects(
   nearestMountedAncestor: null | Fiber,
   hookFlags: HookFlags,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHookPassiveUnmountEffects: passive 阶段执行 useEffect destroy',
+  );
   if (shouldProfile(finishedWork)) {
     startEffectTimer();
     commitHookEffectListUnmount(
@@ -343,8 +358,12 @@ export function commitClassLayoutLifecycles(
   finishedWork: Fiber,
   current: Fiber | null,
 ) {
+  console.log(
+    '[ReactSource:L2] commitClassLayoutLifecycles: layout 阶段执行类组件 DidMount/DidUpdate',
+  );
   const instance = finishedWork.stateNode;
   if (current === null) {
+    // ReactSource: current 为 null 说明这是类组件首次挂载，执行 componentDidMount。
     // We could update instance props and state here,
     // but instead we rely on them being set during last render.
     // TODO: revisit this when we implement resuming.
@@ -410,6 +429,7 @@ export function commitClassLayoutLifecycles(
       }
     }
   } else {
+    // ReactSource: current 存在说明这是更新，执行 componentDidUpdate，并传入 before mutation 阶段保存的 snapshot。
     const prevProps = resolveClassComponentProps(
       finishedWork.type,
       current.memoizedProps,
@@ -518,6 +538,9 @@ export function commitClassDidMount(finishedWork: Fiber) {
 }
 
 export function commitClassCallbacks(finishedWork: Fiber) {
+  console.log(
+    '[ReactSource:L2] commitClassCallbacks: layout 阶段执行 updateQueue 中的 callback',
+  );
   // TODO: I think this is now always non-null by the time it reaches the
   // commit phase. Consider removing the type check.
   const updateQueue: UpdateQueue<mixed> | null =
@@ -797,6 +820,7 @@ function commitAttachRef(finishedWork: Fiber) {
         instanceToUse = finishedWork.stateNode;
     }
     if (typeof ref === 'function') {
+      // ReactSource: 函数 ref 会被调用，并把返回值保存为 refCleanup 供之后解绑。
       if (shouldProfile(finishedWork)) {
         try {
           startEffectTimer();
@@ -822,6 +846,7 @@ function commitAttachRef(finishedWork: Fiber) {
         }
       }
 
+      // ReactSource: createRef/useRef 形式的 ref，直接把实例写入 current。
       // $FlowFixMe[incompatible-use] unable to narrow type to the non-function case
       ref.current = instanceToUse;
     }
@@ -833,6 +858,9 @@ export function safelyAttachRef(
   current: Fiber,
   nearestMountedAncestor: Fiber | null,
 ) {
+  console.log(
+    '[ReactSource:L3] safelyAttachRef: 捕获 ref 绑定错误，避免中断整个 commit',
+  );
   try {
     if (__DEV__) {
       runWithFiberInDEV(current, commitAttachRef, current);

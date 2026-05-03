@@ -430,8 +430,13 @@ function createChildReconciler(
   console.log(
     '[ReactSource:L2] ChildReconciler: 根据 shouldTrackSideEffects 区分 mountChildFibers 与 reconcileChildFibers',
   );
+  // ReactSource: createChildReconciler 是 ChildReconciler 的工厂函数。
+  // shouldTrackSideEffects=false 生成 mountChildFibers；true 生成
+  // reconcileChildFibers。两者核心 diff 逻辑相同，区别是是否给 Fiber 打
+  // Placement / ChildDeletion 等副作用 flags。
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
+      // ReactSource: mount 阶段没有旧子 Fiber 需要删除，因此不记录 deletion。
       // Noop.
       return;
     }
@@ -499,6 +504,8 @@ function createChildReconciler(
   ): number {
     newFiber.index = newIndex;
     if (!shouldTrackSideEffects) {
+      // ReactSource: mountChildFibers 不追踪插入/移动副作用。首屏挂载会在更高层
+      // 统一插入整棵 DOM，避免每个子 Fiber 都打 Placement 导致重复 DOM 操作。
       // During hydration, the useId algorithm needs to know which fibers are
       // part of a list of children (arrays, iterators).
       newFiber.flags |= Forked;
@@ -508,6 +515,8 @@ function createChildReconciler(
     if (current !== null) {
       const oldIndex = current.index;
       if (oldIndex < lastPlacedIndex) {
+        // ReactSource: update 阶段旧 Fiber 位置落后于已经放置的位置，说明这是移动。
+        // Placement flag 会在 commit mutation 阶段触发 DOM 移动/插入。
         // This is a move.
         newFiber.flags |= Placement | PlacementDEV;
         return lastPlacedIndex;
@@ -516,6 +525,7 @@ function createChildReconciler(
         return oldIndex;
       }
     } else {
+      // ReactSource: update 阶段没有 alternate，说明这是新增 Fiber，需要 Placement。
       // This is an insertion.
       newFiber.flags |= Placement | PlacementDEV;
       return lastPlacedIndex;
@@ -526,6 +536,8 @@ function createChildReconciler(
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
     if (shouldTrackSideEffects && newFiber.alternate === null) {
+      // ReactSource: 单子节点 update 时，如果没有 alternate，说明是新增节点，
+      // 给它打 Placement；mount 路径因为 shouldTrackSideEffects=false 不会打。
       newFiber.flags |= Placement | PlacementDEV;
     }
     return newFiber;
@@ -565,6 +577,8 @@ function createChildReconciler(
     element: ReactElement,
     lanes: Lanes,
   ): Fiber {
+    // ReactSource: ReactElement 转 Fiber 的核心分支之一。key/type 能匹配时
+    // 复用 current 创建 workInProgress；不能匹配时创建新的 Fiber。
     const elementType = element.type;
     if (elementType === REACT_FRAGMENT_TYPE) {
       const updated = updateFragment(
@@ -689,6 +703,8 @@ function createChildReconciler(
     console.log(
       '[ReactSource:L3] createChild: reconcileChildrenArray 中根据 ReactNode 创建新的子 Fiber',
     );
+    // ReactSource: newChild 是 beginWork 得到的 ReactNode。这里按文本、
+    // ReactElement、Portal、Lazy、数组/迭代器等不同形态创建对应子 Fiber。
     if (
       (typeof newChild === 'string' && newChild !== '') ||
       typeof newChild === 'number' ||
@@ -1782,6 +1798,8 @@ function createChildReconciler(
     console.log(
       '[ReactSource:L2] reconcileChildFibers: update 阶段子节点 diff 主体',
     );
+    // ReactSource: ChildReconciler 的主入口。它不会递归处理普通嵌套数组，
+    // 而是只根据当前这一层 newChild 选择单节点、数组、文本、Portal、Lazy 等分支。
     // This function is only recursive for Usables/Lazy and not nested arrays.
     // That's so that using a Lazy wrapper is unobservable to the Fragment
     // convention.
@@ -1806,6 +1824,8 @@ function createChildReconciler(
       newChild = newChild.props.children;
     }
 
+    // ReactSource: 对象类型的 newChild 通常是 JSX 编译出来的 ReactElement。
+    // 这里会进入 reconcileSingleElement，再由 placeSingleChild 决定是否打 Placement。
     // Handle object types
     if (typeof newChild === 'object' && newChild !== null) {
       switch (newChild.$$typeof) {
@@ -1951,6 +1971,8 @@ function createChildReconciler(
       }
     }
 
+    // ReactSource: null/undefined/boolean 等都被当作空子节点处理；update 阶段会
+    // 删除剩余旧子 Fiber，mount 阶段则什么也不做。
     // Remaining cases are all treated as empty.
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
@@ -2031,8 +2053,11 @@ function createChildReconciler(
   return reconcileChildFibers;
 }
 
-export const reconcileChildFibers: ChildReconciler =
-  createChildReconciler(true);
+// ReactSource: update 阶段使用，开启 shouldTrackSideEffects，diff 时会记录
+// Placement / ChildDeletion 等 flags，供 commit 阶段执行 DOM 插入、移动、删除。
+export const reconcileChildFibers: ChildReconciler = createChildReconciler(true);
+// ReactSource: mount 阶段使用，关闭 shouldTrackSideEffects。首屏构建子 Fiber
+// 时不为每个新节点打 Placement，减少 commit 阶段的重复插入工作。
 export const mountChildFibers: ChildReconciler = createChildReconciler(false);
 
 export function resetChildReconcilerOnUnwind(): void {

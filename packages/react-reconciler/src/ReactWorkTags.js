@@ -41,6 +41,8 @@ export type WorkTag =
   | 30
   | 31;
 
+// ReactSource: WorkTag 是 Fiber 节点类型。beginWork 通过 workInProgress.tag
+// 分发到 updateFunctionComponent、updateHostRoot、updateHostComponent 等分支。
 export const FunctionComponent = 0;
 export const ClassComponent = 1;
 export const HostRoot = 3; // Root of a host tree. Could be nested inside another node.

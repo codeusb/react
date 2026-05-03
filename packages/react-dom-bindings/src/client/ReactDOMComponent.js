@@ -1051,12 +1051,16 @@ export function setInitialProperties(
   console.log(
     '[ReactSource:L2] setInitialProperties: react-dom 初始化 DOM 属性，React 18 diffProperties 的职责已拆分演进',
   );
+  // ReactSource: DOM 初次挂载属性入口。它根据具体 tag 设置属性、表单初始值、
+  // 非委托事件等；update 阶段则走 updateProperties。
   if (__DEV__) {
     validatePropertiesInDevelopment(tag, props);
   }
 
   // TODO: Make sure that we check isMounted before firing any of these events.
 
+  // ReactSource: 不同 DOM 标签有不同初始化规则，例如 img 的 src/srcSet 要最后设，
+  // input/select/textarea 要处理受控组件初始状态。
   switch (tag) {
     case 'div':
     case 'span':

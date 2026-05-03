@@ -67,6 +67,9 @@ import {runWithFiberInDEV} from './ReactCurrentFiber';
 import {enableFragmentRefs} from 'shared/ReactFeatureFlags';
 
 export function commitHostMount(finishedWork: Fiber) {
+  console.log(
+    '[ReactSource:L2] commitHostMount: layout 阶段处理宿主节点首次挂载后的 DOM 任务',
+  );
   const type = finishedWork.type;
   const props = finishedWork.memoizedProps;
   const instance: Instance = finishedWork.stateNode;
@@ -115,6 +118,9 @@ export function commitHostUpdate(
   newProps: any,
   oldProps: any,
 ): void {
+  console.log(
+    '[ReactSource:L2] commitHostUpdate: mutation 阶段更新 DOM 节点属性和事件',
+  );
   try {
     if (__DEV__) {
       runWithFiberInDEV(
@@ -146,6 +152,9 @@ export function commitHostTextUpdate(
   newText: string,
   oldText: string,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHostTextUpdate: mutation 阶段更新真实 Text 节点内容',
+  );
   const textInstance: TextInstance = finishedWork.stateNode;
   try {
     if (__DEV__) {
@@ -166,6 +175,9 @@ export function commitHostTextUpdate(
 }
 
 export function commitHostResetTextContent(finishedWork: Fiber) {
+  console.log(
+    '[ReactSource:L2] commitHostResetTextContent: mutation 阶段清空宿主节点文本内容',
+  );
   const instance: Instance = finishedWork.stateNode;
   try {
     if (__DEV__) {
@@ -383,9 +395,13 @@ function insertOrAppendPlacementNodeIntoContainer(
   parent: Container,
   parentFragmentInstances: null | Array<FragmentInstanceType>,
 ): void {
+  console.log(
+    '[ReactSource:L3] insertOrAppendPlacementNodeIntoContainer: Placement 插入 root/portal 容器',
+  );
   const {tag} = node;
   const isHost = tag === HostComponent || tag === HostText;
   if (isHost) {
+    // ReactSource: 找到 HostComponent/HostText 才有真实 DOM，可以直接 insert/append。
     const stateNode = node.stateNode;
     if (before) {
       insertInContainerBefore(parent, stateNode, before);
@@ -416,6 +432,7 @@ function insertOrAppendPlacementNodeIntoContainer(
 
   const child = node.child;
   if (child !== null) {
+    // ReactSource: 当前 Fiber 不是宿主节点时，继续向下递归寻找可插入的宿主子节点。
     insertOrAppendPlacementNodeIntoContainer(
       child,
       before,
@@ -447,6 +464,7 @@ function insertOrAppendPlacementNode(
   const {tag} = node;
   const isHost = tag === HostComponent || tag === HostText;
   if (isHost) {
+    // ReactSource: 找到真正的 DOM/Text 节点后，按 before 决定插入到兄弟节点前还是追加到末尾。
     const stateNode = node.stateNode;
     if (before) {
       insertBefore(parent, stateNode, before);
@@ -476,6 +494,7 @@ function insertOrAppendPlacementNode(
 
   const child = node.child;
   if (child !== null) {
+    // ReactSource: 组件 Fiber 自身没有 DOM，Placement 要递归落到它下面的宿主子节点。
     insertOrAppendPlacementNode(child, before, parent, parentFragmentInstances);
     let sibling = child.sibling;
     while (sibling !== null) {
@@ -495,6 +514,8 @@ function commitPlacement(finishedWork: Fiber): void {
     '[ReactSource:L3] commitPlacement: mutation 阶段提交 Placement，把宿主节点放入父容器',
   );
   // Recursively insert all host nodes into the parent.
+  // ReactSource: Placement 的第一步是向上找最近宿主父 Fiber。
+  // HostComponent 是普通 DOM 父节点，HostRoot/HostPortal 是容器。
   let hostParentFiber;
   let parentFragmentInstances = null;
   let parentFiber = finishedWork.return;
@@ -552,12 +573,14 @@ function commitPlacement(finishedWork: Fiber): void {
       const parent: Instance = hostParentFiber.stateNode;
       if (hostParentFiber.flags & ContentReset) {
         // Reset the text content of the parent before doing any insertions
+        // ReactSource: 父节点如果曾经是纯文本内容，插入子节点前要先清空文本。
         resetTextContent(parent);
         // Clear ContentReset from the effect tag
         hostParentFiber.flags &= ~ContentReset;
       }
 
       const before = getHostSibling(finishedWork);
+      // ReactSource: before 是当前 Fiber 在真实 DOM 中的稳定兄弟节点，用于插入排序。
       // We only have the top Fiber that was inserted but we need to recurse down its
       // children to find all the terminal nodes.
       insertOrAppendPlacementNode(
@@ -572,6 +595,7 @@ function commitPlacement(finishedWork: Fiber): void {
     case HostPortal: {
       const parent: Container = hostParentFiber.stateNode.containerInfo;
       const before = getHostSibling(finishedWork);
+      // ReactSource: 根节点/Portal 没有父 DOM instance，直接把宿主节点插入 container。
       insertOrAppendPlacementNodeIntoContainer(
         finishedWork,
         before,
@@ -624,6 +648,9 @@ function commitImmutablePlacementNodeToFragmentInstances(
 }
 
 export function commitHostPlacement(finishedWork: Fiber) {
+  console.log(
+    '[ReactSource:L2] commitHostPlacement: mutation 阶段安全提交 Placement 副作用',
+  );
   try {
     if (__DEV__) {
       runWithFiberInDEV(finishedWork, commitPlacement, finishedWork);
@@ -641,6 +668,9 @@ export function commitHostRemoveChildFromContainer(
   parentContainer: Container,
   hostInstance: Instance | TextInstance,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHostRemoveChildFromContainer: mutation 阶段从 root/portal 容器删除 DOM',
+  );
   try {
     if (__DEV__) {
       runWithFiberInDEV(
@@ -664,6 +694,9 @@ export function commitHostRemoveChild(
   parentInstance: Instance,
   hostInstance: Instance | TextInstance,
 ) {
+  console.log(
+    '[ReactSource:L2] commitHostRemoveChild: mutation 阶段从父 DOM 删除子 DOM',
+  );
   try {
     if (__DEV__) {
       runWithFiberInDEV(

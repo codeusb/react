@@ -174,6 +174,9 @@ if (__DEV__) {
 }
 
 export function initializeUpdateQueue<State>(fiber: Fiber): void {
+  console.log(
+    '[ReactSource:L2] initializeUpdateQueue: 为 HostRoot/ClassComponent 初始化 updateQueue',
+  );
   const queue: UpdateQueue<State> = {
     baseState: fiber.memoizedState,
     firstBaseUpdate: null,
@@ -208,6 +211,9 @@ export function cloneUpdateQueue<State>(
 }
 
 export function createUpdate(lane: Lane): Update<mixed> {
+  console.log(
+    '[ReactSource:L1] createUpdate: 创建更新对象，记录 lane、payload、callback',
+  );
   const update: Update<mixed> = {
     lane,
 
@@ -225,6 +231,9 @@ export function enqueueUpdate<State>(
   update: Update<State>,
   lane: Lane,
 ): FiberRoot | null {
+  console.log(
+    '[ReactSource:L1] enqueueUpdate: 把 update 放入 Fiber 的 updateQueue，并返回待调度 root',
+  );
   const updateQueue = fiber.updateQueue;
   if (updateQueue === null) {
     // Only occurs if the fiber has been unmounted.
@@ -256,8 +265,10 @@ export function enqueueUpdate<State>(
     const pending = sharedQueue.pending;
     if (pending === null) {
       // This is the first update. Create a circular list.
+      // ReactSource: updateQueue.shared.pending 是环形链表，首次入队时 update 指向自己。
       update.next = update;
     } else {
+      // ReactSource: 后续 update 插入 pending 环形链表，render 阶段再统一展开处理。
       update.next = pending.next;
       pending.next = update;
     }
@@ -489,6 +500,9 @@ export function processUpdateQueue<State>(
   instance: any,
   renderLanes: Lanes,
 ): void {
+  console.log(
+    '[ReactSource:L1] processUpdateQueue: render 阶段按 lane 计算 updateQueue 得到新 state',
+  );
   didReadFromEntangledAsyncAction = false;
 
   // This is always non-null on a ClassComponent or HostRoot
@@ -510,6 +524,7 @@ export function processUpdateQueue<State>(
 
     // The pending queue is circular. Disconnect the pointer between first
     // and last so that it's non-circular.
+    // ReactSource: pending 队列入队时是环形链表，处理前先剪开，拼到 base queue 后顺序计算。
     const lastPendingUpdate = pendingQueue;
     const firstPendingUpdate = lastPendingUpdate.next;
     lastPendingUpdate.next = null;
@@ -570,6 +585,8 @@ export function processUpdateQueue<State>(
         : !isSubsetOfLanes(renderLanes, updateLane);
 
       if (shouldSkipUpdate) {
+        // ReactSource: 当前 renderLanes 优先级不够的 update 会被跳过并保留到 base queue，
+        // 这就是 Lane 优先级能分批渲染的关键。
         // Priority is insufficient. Skip this update. If this is the first
         // skipped update, the previous update/state is the new base
         // update/state.

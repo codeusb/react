@@ -508,6 +508,9 @@ export function renderWithHooks<Props, SecondArg>(
   secondArg: SecondArg,
   nextRenderLanes: Lanes,
 ): any {
+  console.log(
+    '[ReactSource:L1] renderWithHooks: 执行函数组件，并在执行期间接管 Hooks 调用',
+  );
   renderLanes = nextRenderLanes;
   currentlyRenderingFiber = workInProgress;
 
@@ -527,6 +530,8 @@ export function renderWithHooks<Props, SecondArg>(
   workInProgress.memoizedState = null;
   workInProgress.updateQueue = null;
   workInProgress.lanes = NoLanes;
+  // ReactSource: 函数组件每次 render 前先重置 hooks 链表和 effect 队列。
+  // 本次调用中 useState/useEffect 等会重新挂到 workInProgress.memoizedState/updateQueue。
 
   // The following should have already been reset
   // currentHook = null;
@@ -563,6 +568,8 @@ export function renderWithHooks<Props, SecondArg>(
         ? HooksDispatcherOnMount
         : HooksDispatcherOnUpdate;
   }
+  // ReactSource: ReactCurrentDispatcher.H 决定 useState/useEffect 当前走 mount 还是 update 版本。
+  // 所以 Hooks 只能在函数组件执行期间调用，离开 renderWithHooks 后 dispatcher 会恢复。
 
   // In Strict Mode, during development, user functions are double invoked to
   // help detect side effects. The logic for how this is implemented for in
@@ -597,6 +604,7 @@ export function renderWithHooks<Props, SecondArg>(
   let children = __DEV__
     ? callComponentInDEV(Component, props, secondArg)
     : Component(props, secondArg);
+  // ReactSource: 这里是真正调用用户函数组件的地方，返回值就是 JSX 编译后的 ReactNode。
   shouldDoubleInvokeUserFnsInHooksDEV = false;
 
   // Check if there was a render phase update
@@ -627,6 +635,7 @@ export function renderWithHooks<Props, SecondArg>(
   }
 
   finishRenderingHooks(current, workInProgress, Component);
+  // ReactSource: 收尾会恢复 dispatcher、保存 hook 类型，并把本次 hooks/effects 固化到 Fiber 上。
 
   return children;
 }

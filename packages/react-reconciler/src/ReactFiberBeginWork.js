@@ -348,6 +348,9 @@ export function reconcileChildren(
     '[ReactSource:L2] reconcileChildren: 根据 mount/update 选择 mountChildFibers 或 reconcileChildFibers 创建子 Fiber',
   );
   if (current === null) {
+    // ReactSource: mount 阶段。当前组件之前没有渲染过，子 Fiber 不需要和旧树
+    // 做最小副作用 diff，所以使用 mountChildFibers(false) 创建子 Fiber。
+    // 这也是首屏 mount 时大多数子 Fiber 不打 Placement 的优化基础。
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
@@ -359,6 +362,9 @@ export function reconcileChildren(
       renderLanes,
     );
   } else {
+    // ReactSource: update 阶段。current 是上一次提交的 Fiber，current.child
+    // 是旧子 Fiber 链；nextChildren 是本次 render 得到的新 ReactNode。
+    // reconcileChildFibers(true) 会在对比中记录 Placement / ChildDeletion 等 flags。
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
     // the clone algorithm to create a copy of all the current children.
@@ -1430,6 +1436,9 @@ function updateFunctionComponent(
   nextProps: any,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L1] updateFunctionComponent: beginWork 处理函数组件，执行组件函数并得到 children',
+  );
   if (__DEV__) {
     if (
       Component.prototype &&
@@ -1495,6 +1504,8 @@ function updateFunctionComponent(
     markComponentRenderStarted(workInProgress);
   }
   if (__DEV__) {
+    // ReactSource: renderWithHooks 会真正调用函数组件，并在调用期间安装 Hooks dispatcher。
+    // 函数组件 return 的 ReactNode 会成为 nextChildren，后续 reconcileChildren 转成子 Fiber。
     nextChildren = renderWithHooks(
       current,
       workInProgress,
@@ -1505,6 +1516,7 @@ function updateFunctionComponent(
     );
     hasId = checkDidRenderIdHook();
   } else {
+    // ReactSource: 生产环境同样通过 renderWithHooks 执行函数组件，只是少了 DEV 校验。
     nextChildren = renderWithHooks(
       current,
       workInProgress,
@@ -1520,6 +1532,7 @@ function updateFunctionComponent(
   }
 
   if (current !== null && !didReceiveUpdate) {
+    // ReactSource: 函数组件执行后如果确认没有接收到更新，可以复用旧 Fiber 子树。
     bailoutHooks(current, workInProgress, renderLanes);
     return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
   }
@@ -1531,6 +1544,7 @@ function updateFunctionComponent(
   // React DevTools reads this flag.
   workInProgress.flags |= PerformedWork;
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  // ReactSource: 函数组件自身没有 DOM，beginWork 返回它的第一个子 Fiber 继续深度优先遍历。
   return workInProgress.child;
 }
 
@@ -1803,6 +1817,9 @@ function updateHostRoot(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L1] updateHostRoot: beginWork 处理 HostRoot，把 root.render 的 ReactElement 取出来',
+  );
   pushHostRootContext(workInProgress);
 
   if (current === null) {
@@ -1813,6 +1830,8 @@ function updateHostRoot(
   const prevState: RootState = workInProgress.memoizedState;
   const prevChildren = prevState.element;
   cloneUpdateQueue(current, workInProgress);
+  // ReactSource: HostRoot 的 updateQueue 中保存了 root.render(children) 创建的 update。
+  // processUpdateQueue 会把 update.payload.element 计算进 memoizedState.element。
   processUpdateQueue(workInProgress, nextProps, null, renderLanes);
 
   const nextState: RootState = workInProgress.memoizedState;
@@ -1838,6 +1857,8 @@ function updateHostRoot(
   // Caution: React DevTools currently depends on this property
   // being called "element".
   const nextChildren = nextState.element;
+  // ReactSource: nextChildren 就是根节点要渲染的 ReactElement/ReactNode，
+  // 后面 reconcileChildren 会把它转换成真正的组件 Fiber。
   if (supportsHydration && prevState.isDehydrated) {
     // This is a hydration root whose shell has not yet hydrated. We should
     // attempt to hydrate.
@@ -1939,6 +1960,8 @@ function updateHostComponent(
   console.log(
     '[ReactSource:L2] beginWork.updateHostComponent: 处理普通 DOM 标签 Fiber，并 reconcile children',
   );
+  // ReactSource: HostComponent 对应普通 DOM 标签 Fiber，如 div/span/button。
+  // beginWork 到这里会处理 host context、文本子节点优化，然后 reconcile children。
   if (current === null) {
     tryToClaimNextHydratableInstance(workInProgress);
   }
@@ -1950,6 +1973,8 @@ function updateHostComponent(
   const prevProps = current !== null ? current.memoizedProps : null;
 
   let nextChildren = nextProps.children;
+  // ReactSource: 判断 children 是否能直接作为 DOM textContent 设置。
+  // 如果可以，就不再创建 HostText 子 Fiber，减少一个 Fiber 节点和一次遍历。
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
 
   if (isDirectTextChild) {
@@ -1959,6 +1984,8 @@ function updateHostComponent(
     // avoids allocating another HostText fiber and traversing it.
     nextChildren = null;
   } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
+    // ReactSource: 从“直接文本内容”切换到普通 children 时，需要在 commit
+    // mutation 阶段先清空旧 textContent，所以给当前 Fiber 打 ContentReset。
     // If we're switching from a direct text child to a normal child, or to
     // empty, we need to schedule the text content to be reset.
     workInProgress.flags |= ContentReset;
@@ -3725,6 +3752,8 @@ function bailoutOnAlreadyFinishedWork(
   console.log(
     '[ReactSource:L2] bailoutOnAlreadyFinishedWork: 当前 Fiber 可复用时跳过 beginWork，复用已完成工作',
   );
+  // ReactSource: bailout 表示当前 Fiber 自己不需要重新计算。能复用就继承
+  // current 的依赖信息，避免重新进入组件 render / host reconciliation。
   if (current !== null) {
     // Reuse previous dependencies
     workInProgress.dependencies = current.dependencies;
@@ -3737,6 +3766,8 @@ function bailoutOnAlreadyFinishedWork(
 
   markSkippedUpdateLanes(workInProgress.lanes);
 
+  // ReactSource: 如果子树也没有包含本次 renderLanes 的工作，就整棵子树跳过；
+  // 如果子树还有工作，则克隆 child Fiber 链，继续向下处理。
   // Check if the children have any pending work.
   if (!includesSomeLane(renderLanes, workInProgress.childLanes)) {
     // The children don't have any work either. We can skip them.
@@ -3859,6 +3890,8 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   console.log(
     '[ReactSource:L2] attemptEarlyBailoutIfNoScheduledUpdate: beginWork 的 update 快速 bailout 分支',
   );
+  // ReactSource: beginWork 的 update 快速路径。当前 Fiber props/context 没变，
+  // 也没有挂起更新时，不进入具体 tag 的 updateXXX，只补齐 context 栈后 bailout。
   // This fiber does not have any pending work. Bailout without entering
   // the begin phase. There's still some bookkeeping we that needs to be done
   // in this optimized path, mostly pushing stuff onto the stack.
@@ -4125,7 +4158,11 @@ function beginWork(
     }
   }
 
+  // ReactSource: current 是页面上已提交的旧 Fiber，workInProgress 是本次正在
+  // 构建的新 Fiber。current 是否存在基本区分 update / mount 两类路径。
   if (current !== null) {
+    // ReactSource: update 阶段。先比较 props、legacy context、热更新类型，
+    // 再看当前 Fiber 或 context 是否真的有本次 lanes 的工作。
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
 
@@ -4139,6 +4176,8 @@ function beginWork(
       // This may be unset if the props are determined to be equal later (memo).
       didReceiveUpdate = true;
     } else {
+      // ReactSource: props/context 没变时，继续检查 lanes/context。没有命中
+      // 本次 renderLanes 就可以尝试早 bailout，复用已有 Fiber 工作。
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
       const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
@@ -4172,6 +4211,8 @@ function beginWork(
       }
     }
   } else {
+    // ReactSource: mount 阶段。除 HostRoot 等特殊情况外，组件首次创建时
+    // current 为 null，后面会根据 workInProgress.tag 创建子 Fiber。
     didReceiveUpdate = false;
 
     if (getIsHydrating() && isForkedChild(workInProgress)) {
@@ -4190,6 +4231,8 @@ function beginWork(
     }
   }
 
+  // ReactSource: 即将进入具体 tag 的 beginWork 分支，先清空当前 Fiber 已消费的
+  // lanes。未被本次消费的子树 lanes 会通过 childLanes 继续保留。
   // Before entering the begin phase, clear pending update priority.
   // TODO: This assumes that we're about to evaluate the component and process
   // the update queue. However, there's an exception: SimpleMemoComponent
@@ -4197,6 +4240,9 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // ReactSource: Fiber tag 决定 beginWork 进入哪个 updateXXX 分支：
+  // FunctionComponent 会执行函数组件并得到 nextChildren，HostComponent 会处理
+  // DOM 标签，HostRoot 会处理 root.render 传入的 ReactElement。
   switch (workInProgress.tag) {
     case LazyComponent: {
       const elementType = workInProgress.elementType;

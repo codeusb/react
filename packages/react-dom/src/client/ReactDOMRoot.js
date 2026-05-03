@@ -100,6 +100,8 @@ import {ConcurrentRoot} from 'react-reconciler/src/ReactRootTags';
 
 // $FlowFixMe[missing-this-annot]
 function ReactDOMRoot(internalRoot: FiberRoot) {
+  // 初始化阶段：createRoot 最终返回 ReactDOMRoot 实例。
+  // ReactDOMRoot 只保存内部 FiberRoot，后续 root.render 会从这里取出 root。
   this._internalRoot = internalRoot;
 }
 
@@ -110,6 +112,8 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
     console.log(
       '[ReactSource:L1] ReactDOMRoot.render: 应用根实例开始渲染，向 reconciler 发起 updateContainer',
     );
+    // root.render(<App />) 调用的是 ReactDOMRoot 原型方法。
+    // 初始化完成后，这里取出 createRoot 阶段保存的 FiberRoot。
     const root = this._internalRoot;
     if (root === null) {
       throw new Error('Cannot update an unmounted root.');
@@ -135,6 +139,8 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
         );
       }
     }
+    // 调用 updateContainer 开启更新：创建 update，写入 updateQueue，
+    // 然后进入 scheduleUpdateOnFiber 调度 render 阶段。
     updateContainer(children, root, null, null);
   };
 
@@ -178,12 +184,17 @@ export function createRoot(
   console.log(
     '[ReactSource:L1] createRoot: React 应用初始化入口，创建 ReactDOMRoot，render 负责渲染根组件',
   );
+  // 1. 校验容器元素 container 是否合法。
   if (!isValidContainer(container)) {
     throw new Error('Target container is not a DOM element.');
   }
 
+  // DEV 环境下提示重复使用 container 等不合理用法。
   warnIfReactDOMContainerInDEV(container);
 
+  // 2. 准备 options 对应的根配置。
+  // React 19 中错误处理拆为 onUncaughtError / onCaughtError / onRecoverableError，
+  // concurrentUpdatesByDefaultOverride 已经保留为兼容参数但不再真正生效。
   const concurrentUpdatesByDefaultOverride = false;
   let isStrictMode = false;
   let identifierPrefix = '';
@@ -193,6 +204,7 @@ export function createRoot(
   let onDefaultTransitionIndicator = defaultOnDefaultTransitionIndicator;
   let transitionCallbacks = null;
 
+  // 3. 处理 createRoot(container, options) 的 options 参数。
   if (options !== null && options !== undefined) {
     if (__DEV__) {
       if ((options: any).hydrate) {
@@ -240,6 +252,8 @@ export function createRoot(
     }
   }
 
+  // 4. 创建 FiberRootNode 和 HostRoot Fiber。
+  // createContainer 属于 react-reconciler 包，react-dom 在这里把宿主容器交给 reconciler。
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -253,14 +267,18 @@ export function createRoot(
     onDefaultTransitionIndicator,
     transitionCallbacks,
   );
+  // 5. 标记 DOM 容器：把 container 与 root.current，也就是 HostRoot Fiber 关联。
+  // 后续事件系统、更新查找等都可以通过 DOM 容器找到对应的 React root。
   markContainerAsRoot(root.current, container);
 
   const rootContainerElement: Document | Element | DocumentFragment =
     !disableCommentsAsDOMContainers && container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
+  // 6. 在根容器上监听 React 支持的全部原生事件，建立事件委托入口。
   listenToAllSupportedEvents(rootContainerElement);
 
+  // 7. 返回 ReactDOMRoot 实例；用户随后通过 root.render(<App />) 发起首次渲染。
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   return new ReactDOMRoot(root);
 }

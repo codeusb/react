@@ -264,8 +264,14 @@ export function createContainer(
   console.log(
     '[ReactSource:L1] createContainer: react-dom 进入 reconciler，准备创建 FiberRoot 容器',
   );
+  // createRoot 普通客户端渲染不走 hydration，因此 hydrate 为 false。
   const hydrate = false;
+  // 初始化阶段还没有真正传入 <App />，根节点的初始 children 为 null。
+  // 真正的 element 会在 root.render(<App />) 时通过 updateContainer 写入 update.payload。
   const initialChildren = null;
+
+  // 进入 FiberRoot 创建流程：创建 FiberRootNode 与 HostRoot Fiber，
+  // 并把二者通过 root.current / uninitializedFiber.stateNode 双向关联。
   const root = createFiberRoot(
     containerInfo,
     tag,
@@ -281,6 +287,7 @@ export function createContainer(
     onDefaultTransitionIndicator,
     transitionCallbacks,
   );
+  // 注册默认 transition indicator 回调；这是当前版本新增/演进出的根配置之一。
   registerDefaultIndicator(onDefaultTransitionIndicator);
   return root;
 }
@@ -367,7 +374,10 @@ export function updateContainer(
   console.log(
     '[ReactSource:L1] updateContainer: render 调用后的更新入口，创建 update 并调度到 FiberRoot',
   );
+  // container.current 就是 createFiberRoot 阶段创建的 HostRoot Fiber。
   const current = container.current;
+  // 计算本次更新的优先级 lane。React 18.2 文档里常见的 eventTime
+  // 在当前版本中已从 createUpdate 参数里移除，lane 成为关键调度载体。
   const lane = requestUpdateLane(current);
   updateContainerImpl(
     current,
@@ -417,6 +427,7 @@ function updateContainerImpl(
     markRenderScheduled(lane);
   }
 
+  // 计算根子树 context，并写入 container.context / pendingContext。
   const context = getContextForSubtree(parentComponent);
   if (container.context === null) {
     container.context = context;
@@ -441,9 +452,11 @@ function updateContainerImpl(
     }
   }
 
+  // 创建 update 对象，表示本次 root.render 要提交的一次根更新。
   const update = createUpdate(lane);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // update.payload.element 保存需要挂载到根节点下的 ReactElement，例如 <App />。
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;
@@ -460,10 +473,13 @@ function updateContainerImpl(
     update.callback = callback;
   }
 
+  // 将 update 加入 HostRoot Fiber 的 updateQueue。
   const root = enqueueUpdate(rootFiber, update, lane);
   if (root !== null) {
     startUpdateTimerByLane(lane, 'root.render()', null);
+    // 调度更新，进入 render 阶段的入口链路。
     scheduleUpdateOnFiber(root, rootFiber, lane);
+    // 如果本次更新属于 transition，需要把相关 lane 纠缠起来，保证一致性。
     entangleTransitions(root, rootFiber, lane);
   }
 }

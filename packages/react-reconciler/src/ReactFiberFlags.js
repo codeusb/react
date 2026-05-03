@@ -17,6 +17,8 @@ export type Flags = number;
 // Don't change these values. They're used by React Dev Tools.
 export const NoFlags = /*                      */ 0b0000000000000000000000000000000;
 export const PerformedWork = /*                */ 0b0000000000000000000000000000001;
+// ReactSource: Placement 表示这个 Fiber 对应的宿主节点需要在 commit mutation
+// 阶段插入或移动到正确位置。update diff 中新增/移动节点会打这个 flag。
 export const Placement = /*                    */ 0b0000000000000000000000000000010;
 export const DidCapture = /*                   */ 0b0000000000000000000000010000000;
 export const Hydrating = /*                    */ 0b0000000000000000001000000000000;
@@ -25,7 +27,11 @@ export const Hydrating = /*                    */ 0b0000000000000000001000000000
 export const Update = /*                       */ 0b0000000000000000000000000000100;
 export const Cloned = /*                       */ 0b0000000000000000000000000001000;
 
+// ReactSource: ChildDeletion 记录父 Fiber 有子节点需要删除；具体被删的 Fiber
+// 会放在 returnFiber.deletions，commit 阶段统一卸载/删除。
 export const ChildDeletion = /*                */ 0b0000000000000000000000000010000;
+// ReactSource: ContentReset 用于 HostComponent 从直接文本内容切换到普通 children
+// 的场景，commit mutation 阶段需要先清空旧 textContent。
 export const ContentReset = /*                 */ 0b0000000000000000000000000100000;
 export const Callback = /*                     */ 0b0000000000000000000000001000000;
 /* Used by DidCapture:                            0b0000000000000000000000010000000; */
