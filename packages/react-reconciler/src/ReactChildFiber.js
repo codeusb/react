@@ -427,6 +427,9 @@ type ChildReconciler = (
 function createChildReconciler(
   shouldTrackSideEffects: boolean,
 ): ChildReconciler {
+  console.log(
+    '[ReactSource:L2] ChildReconciler: 根据 shouldTrackSideEffects 区分 mountChildFibers 与 reconcileChildFibers',
+  );
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -683,6 +686,9 @@ function createChildReconciler(
     newChild: any,
     lanes: Lanes,
   ): Fiber | null {
+    console.log(
+      '[ReactSource:L3] createChild: reconcileChildrenArray 中根据 ReactNode 创建新的子 Fiber',
+    );
     if (
       (typeof newChild === 'string' && newChild !== '') ||
       typeof newChild === 'number' ||
@@ -1127,6 +1133,9 @@ function createChildReconciler(
     newChildren: Array<any>,
     lanes: Lanes,
   ): Fiber | null {
+    console.log(
+      '[ReactSource:L1] Diff 算法: reconcileChildrenArray 按 key/index 复用、移动或创建子 Fiber',
+    );
     // This algorithm can't optimize by searching from both ends since we
     // don't have backpointers on fibers. I'm trying to see how far we can get
     // with that model. If it ends up not being worth the tradeoffs, we can
@@ -1770,6 +1779,9 @@ function createChildReconciler(
     newChild: any,
     lanes: Lanes,
   ): Fiber | null {
+    console.log(
+      '[ReactSource:L2] reconcileChildFibers: update 阶段子节点 diff 主体',
+    );
     // This function is only recursive for Usables/Lazy and not nested arrays.
     // That's so that using a Lazy wrapper is unobservable to the Fragment
     // convention.
@@ -2033,6 +2045,9 @@ export function cloneChildFibers(
   current: Fiber | null,
   workInProgress: Fiber,
 ): void {
+  console.log(
+    '[ReactSource:L3] cloneChildFibers: bailout 时克隆子 Fiber 链，复用上一次完成的工作',
+  );
   if (current !== null && workInProgress.child !== current.child) {
     throw new Error('Resuming work not yet implemented.');
   }

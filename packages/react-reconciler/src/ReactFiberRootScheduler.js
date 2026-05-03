@@ -114,6 +114,9 @@ let isFlushingWork: boolean = false;
 let currentEventTransitionLane: Lane = NoLane;
 
 export function ensureRootIsScheduled(root: FiberRoot): void {
+  console.log(
+    '[ReactSource:L1] ensureRootIsScheduled: 确保 root 进入调度队列，并安排微任务处理后续 work',
+  );
   // This function is called whenever a root receives an update. It does two
   // things 1) it ensures the root is in the root schedule, and 2) it ensures
   // there's a pending microtask to process the root schedule.
@@ -514,6 +517,9 @@ function performWorkOnRootViaSchedulerTask(
   root: FiberRoot,
   didTimeout: boolean,
 ): RenderTaskFn | null {
+  console.log(
+    '[ReactSource:L1] performConcurrentWorkOnRoot: 当前版本对应的并发调度入口，经 Scheduler 执行 root work',
+  );
   // This is the entry point for concurrent tasks scheduled via Scheduler (and
   // postTask, in the future).
 
@@ -606,6 +612,9 @@ function performWorkOnRootViaSchedulerTask(
 }
 
 function performSyncWorkOnRoot(root: FiberRoot, lanes: Lanes) {
+  console.log(
+    '[ReactSource:L1] performSyncWorkOnRoot: 同步任务入口，不经 Scheduler 时间切片，直接执行 root work',
+  );
   // This is the entry point for synchronous tasks that don't go
   // through Scheduler.
   const didFlushPassiveEffects = flushPendingEffects();
@@ -627,6 +636,9 @@ function scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: RenderTaskFn,
 ) {
+  console.log(
+    '[ReactSource:L2] scheduleCallback: root 调度阶段把 React 任务交给 Scheduler_scheduleCallback',
+  );
   if (__DEV__ && ReactSharedInternals.actQueue !== null) {
     // Special case: We're inside an `act` scope (a testing utility).
     // Instead of scheduling work in the host environment, add it to a

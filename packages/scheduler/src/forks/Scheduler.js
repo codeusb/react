@@ -186,6 +186,9 @@ function flushWork(initialTime: number) {
 }
 
 function workLoop(initialTime: number) {
+  console.log(
+    '[ReactSource:L1] Scheduler: workLoop 循环取出 taskQueue 中的任务，按优先级和过期时间执行',
+  );
   let currentTime = initialTime;
   advanceTimers(currentTime);
   currentTask = peek(taskQueue);
@@ -329,6 +332,9 @@ function unstable_scheduleCallback(
   callback: Callback,
   options?: {delay: number},
 ): Task {
+  console.log(
+    '[ReactSource:L1] unstable_scheduleCallback: Scheduler 调度任务入口，按优先级创建 task 并入队',
+  );
   var currentTime = getCurrentTime();
 
   var startTime;
@@ -445,6 +451,9 @@ let frameInterval: number = frameYieldMs;
 let startTime = -1;
 
 function shouldYieldToHost(): boolean {
+  console.log(
+    '[ReactSource:L1] 异步可中断: shouldYieldToHost 判断当前时间片是否应该让出主线程',
+  );
   if (!enableAlwaysYieldScheduler && enableRequestPaint && needsPaint) {
     // Yield now.
     return true;
@@ -483,6 +492,9 @@ function forceFrameRate(fps: number) {
 }
 
 const performWorkUntilDeadline = () => {
+  console.log(
+    '[ReactSource:L2] performWorkUntilDeadline: 时间片驱动入口，执行 workLoop，必要时继续调度下一片',
+  );
   if (enableRequestPaint) {
     needsPaint = false;
   }
@@ -547,6 +559,9 @@ if (typeof localSetImmediate === 'function') {
 }
 
 function requestHostCallback() {
+  console.log(
+    '[ReactSource:L2] requestHostCallback: 请求宿主环境回调，启动 performWorkUntilDeadline',
+  );
   if (!isMessageLoopRunning) {
     isMessageLoopRunning = true;
     schedulePerformWorkUntilDeadline();

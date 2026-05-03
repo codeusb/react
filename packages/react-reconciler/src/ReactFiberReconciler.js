@@ -243,7 +243,9 @@ export function createContainer(
   identifierPrefix: string,
   onUncaughtError: (
     error: mixed,
-    errorInfo: {+componentStack?: ?string},
+    errorInfo: {
+      +componentStack?: ?string,
+    },
   ) => void,
   onCaughtError: (
     error: mixed,
@@ -259,6 +261,9 @@ export function createContainer(
   onDefaultTransitionIndicator: () => void | (() => void),
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): OpaqueRoot {
+  console.log(
+    '[ReactSource:L1] createContainer: react-dom 进入 reconciler，准备创建 FiberRoot 容器',
+  );
   const hydrate = false;
   const initialChildren = null;
   const root = createFiberRoot(
@@ -359,6 +364,9 @@ export function updateContainer(
   parentComponent: ?component(...props: any),
   callback: ?Function,
 ): Lane {
+  console.log(
+    '[ReactSource:L1] updateContainer: render 调用后的更新入口，创建 update 并调度到 FiberRoot',
+  );
   const current = container.current;
   const lane = requestUpdateLane(current);
   updateContainerImpl(

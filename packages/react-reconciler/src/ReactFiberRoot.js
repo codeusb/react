@@ -170,7 +170,9 @@ export function createFiberRoot(
   formState: ReactFormState<any, any> | null,
   onUncaughtError: (
     error: mixed,
-    errorInfo: {+componentStack?: ?string},
+    errorInfo: {
+      +componentStack?: ?string,
+    },
   ) => void,
   onCaughtError: (
     error: mixed,
@@ -186,6 +188,9 @@ export function createFiberRoot(
   onDefaultTransitionIndicator: () => void | (() => void),
   transitionCallbacks: null | TransitionTracingCallbacks,
 ): FiberRoot {
+  console.log(
+    '[ReactSource:L1] createFiberRoot: 创建 FiberRoot，并把 HostRoot Fiber 与 root.current 双向关联',
+  );
   // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,

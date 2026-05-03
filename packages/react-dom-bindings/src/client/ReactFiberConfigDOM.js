@@ -483,6 +483,9 @@ export function createInstance(
   hostContext: HostContext,
   internalInstanceHandle: Object,
 ): Instance {
+  console.log(
+    '[ReactSource:L1] Renderer: createInstance 由 react-dom 渲染器创建真实 DOM Element',
+  );
   let hostContextProd: HostContextProd;
   if (__DEV__) {
     // TODO: take namespace into account when validating.
@@ -623,6 +626,9 @@ export function finalizeInitialChildren(
   props: Props,
   hostContext: HostContext,
 ): boolean {
+  console.log(
+    '[ReactSource:L3] finalizeInitialChildren: DOM 初次挂载属性完成后的收尾处理',
+  );
   setInitialProperties(domElement, type, props);
   switch (type) {
     case 'button':
@@ -916,6 +922,9 @@ export function commitUpdate(
   newProps: Props,
   internalInstanceHandle: Object,
 ): void {
+  console.log(
+    '[ReactSource:L3] commitUpdate: mutation 阶段提交 DOM 属性更新',
+  );
   // Diff and update the properties.
   updateProperties(domElement, type, oldProps, newProps);
 
@@ -933,6 +942,9 @@ export function commitTextUpdate(
   oldText: string,
   newText: string,
 ): void {
+  console.log(
+    '[ReactSource:L3] commitTextUpdate: mutation 阶段提交文本节点更新',
+  );
   textInstance.nodeValue = newText;
 }
 
@@ -946,6 +958,9 @@ export function appendChild(
   parentInstance: Instance,
   child: Instance | TextInstance,
 ): void {
+  console.log(
+    '[ReactSource:L3] appendChild: 宿主环境 append DOM 子节点',
+  );
   if (supportsMoveBefore && child.parentNode !== null) {
     // $FlowFixMe[prop-missing]: We've checked this with supportsMoveBefore.
     parentInstance.moveBefore(child, null);
@@ -1049,6 +1064,9 @@ export function insertBefore(
   child: Instance | TextInstance,
   beforeChild: Instance | TextInstance | SuspenseInstance | ActivityInstance,
 ): void {
+  console.log(
+    '[ReactSource:L3] insertBefore: 宿主环境把 DOM 节点插入到指定 sibling 前',
+  );
   if (supportsMoveBefore && child.parentNode !== null) {
     // $FlowFixMe[prop-missing]: We've checked this with supportsMoveBefore.
     parentInstance.moveBefore(child, beforeChild);

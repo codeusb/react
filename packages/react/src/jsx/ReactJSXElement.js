@@ -159,6 +159,9 @@ function elementRefGetterWithDeprecationWarning() {
  * @internal
  */
 function ReactElement(type, key, props, owner, debugStack, debugTask) {
+  console.log(
+    '[ReactSource:L1] 虚拟 DOM / ReactElement: JSX 或 React.createElement 最终都会创建 ReactElement 对象',
+  );
   // Ignore whatever was passed as the ref argument and treat `props.ref` as
   // the source of truth. The only thing we use this for is `element.ref`,
   // which will log a deprecation warning on access. In the next release, we
@@ -280,6 +283,9 @@ function ReactElement(type, key, props, owner, debugStack, debugTask) {
  * @param {string} key
  */
 export function jsxProd(type, config, maybeKey) {
+  console.log(
+    '[ReactSource:L1] JSX: 生产环境 JSX 编译产物会调用 jsx/jsxs，返回 ReactElement',
+  );
   let key = null;
 
   // Currently, key can be spread in as a prop. This causes a potential
@@ -405,6 +411,9 @@ const didWarnAboutKeySpread = {};
  * @param {string} key
  */
 export function jsxDEV(type, config, maybeKey, isStaticChildren) {
+  console.log(
+    '[ReactSource:L1] JSX: 开发环境 JSX 编译产物会调用 jsxDEV，返回 ReactElement',
+  );
   const trackActualOwner =
     __DEV__ &&
     ReactSharedInternals.recentlyCreatedOwnerStacks++ < ownerStackLimit;
@@ -558,6 +567,9 @@ function jsxDEVImpl(
  * See https://reactjs.org/docs/react-api.html#createelement
  */
 export function createElement(type, config, children) {
+  console.log(
+    '[ReactSource:L1] React.createElement: 手写 createElement 或旧 JSX transform 会从这里创建 ReactElement',
+  );
   if (__DEV__) {
     // We don't warn for invalid element type here because with owner stacks,
     // we error in the renderer. The renderer is the only one that knows what

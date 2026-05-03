@@ -142,6 +142,9 @@ export function commitHookEffectListMount(
   flags: HookFlags,
   finishedWork: Fiber,
 ) {
+  console.log(
+    '[ReactSource:L3] commitHookEffectListMount: 遍历 Hook effect 链表并执行 create',
+  );
   try {
     const updateQueue: FunctionComponentUpdateQueue | null =
       (finishedWork.updateQueue: any);
@@ -754,6 +757,9 @@ export function safelyCallComponentWillUnmount(
 }
 
 function commitAttachRef(finishedWork: Fiber) {
+  console.log(
+    '[ReactSource:L2] commitAttachRef: layout 阶段绑定 ref，获取 DOM 或组件实例',
+  );
   const ref = finishedWork.ref;
   if (ref !== null) {
     let instanceToUse;

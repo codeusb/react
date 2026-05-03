@@ -342,6 +342,9 @@ export function commitBeforeMutationEffects(
   firstChild: Fiber,
   committedLanes: Lanes,
 ): void {
+  console.log(
+    '[ReactSource:L1] commitBeforeMutationEffects: commit 的 before mutation 阶段，DOM 变更前遍历副作用',
+  );
   focusedInstanceHandle = prepareForCommit(root.containerInfo);
   shouldFireAfterActiveInstanceBlur = false;
 
@@ -359,6 +362,9 @@ export function commitBeforeMutationEffects(
 }
 
 function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
+  console.log(
+    '[ReactSource:L2] commitBeforeMutationEffects_begin: before mutation 递阶段，寻找带 BeforeMutationMask 的 Fiber',
+  );
   // If this commit is eligible for a View Transition we look into all mutated subtrees.
   // TODO: We could optimize this by marking these with the Snapshot subtree flag in the render phase.
   const subtreeMask = isViewTransitionEligible
@@ -453,6 +459,9 @@ function commitBeforeMutationEffects_begin(isViewTransitionEligible: boolean) {
 function commitBeforeMutationEffects_complete(
   isViewTransitionEligible: boolean,
 ) {
+  console.log(
+    '[ReactSource:L2] commitBeforeMutationEffects_complete: before mutation 归阶段，执行 Fiber 对应逻辑',
+  );
   while (nextEffect !== null) {
     const fiber = nextEffect;
     commitBeforeMutationEffectsOnFiber(fiber, isViewTransitionEligible);
@@ -472,6 +481,9 @@ function commitBeforeMutationEffectsOnFiber(
   finishedWork: Fiber,
   isViewTransitionEligible: boolean,
 ) {
+  console.log(
+    '[ReactSource:L2] commitBeforeMutationEffectsOnFiber: before mutation 阶段处理单个 Fiber',
+  );
   const current = finishedWork.alternate;
   const flags = finishedWork.flags;
 
@@ -595,6 +607,9 @@ function commitLayoutEffectOnFiber(
   finishedWork: Fiber,
   committedLanes: Lanes,
 ): void {
+  console.log(
+    '[ReactSource:L2] commitLayoutEffectOnFiber: layout 阶段处理单个 Fiber 的 layout effect/ref',
+  );
   const prevEffectStart = pushComponentEffectStart();
   const prevEffectDuration = pushComponentEffectDuration();
   const prevEffectErrors = pushComponentEffectErrors();
@@ -1327,6 +1342,9 @@ function commitDeletionEffects(
   returnFiber: Fiber,
   deletedFiber: Fiber,
 ) {
+  console.log(
+    '[ReactSource:L2] commitDeletionEffects: mutation 阶段处理删除副作用入口',
+  );
   const prevEffectStart = pushComponentEffectStart();
 
   if (supportsMutation) {
@@ -1416,6 +1434,9 @@ function recursivelyTraverseDeletionEffects(
   nearestMountedAncestor: Fiber,
   parent: Fiber,
 ) {
+  console.log(
+    '[ReactSource:L3] recursivelyTraverseDeletionEffects: 删除阶段递归遍历待卸载子树',
+  );
   // TODO: Use a static flag to skip trees that don't have unmount effects
   let child = parent.child;
   while (child !== null) {
@@ -1429,6 +1450,9 @@ function commitDeletionEffectsOnFiber(
   nearestMountedAncestor: Fiber,
   deletedFiber: Fiber,
 ) {
+  console.log(
+    '[ReactSource:L3] commitDeletionEffectsOnFiber: 删除阶段处理单个 Fiber 的卸载逻辑',
+  );
   // TODO: Delete this Hook once new DevTools ships everywhere. No longer needed.
   onCommitUnmount(deletedFiber);
 
@@ -1946,6 +1970,9 @@ export function commitMutationEffects(
   finishedWork: Fiber,
   committedLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L1] commitMutationEffects: commit 的 mutation 阶段，真正执行 DOM 插入/删除/更新',
+  );
   inProgressLanes = committedLanes;
   inProgressRoot = root;
 
@@ -1965,6 +1992,9 @@ function recursivelyTraverseMutationEffects(
   parentFiber: Fiber,
   lanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] recursivelyTraverseMutationEffects: mutation 阶段递归遍历子树副作用',
+  );
   // Deletions effects can be scheduled on any fiber type. They need to happen
   // before the children effects have fired.
   const deletions = parentFiber.deletions;
@@ -1991,6 +2021,9 @@ function commitMutationEffectsOnFiber(
   root: FiberRoot,
   lanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] commitMutationEffectsOnFiber: mutation 阶段处理单个 Fiber 的副作用',
+  );
   const prevEffectStart = pushComponentEffectStart();
   const prevEffectDuration = pushComponentEffectDuration();
   const prevEffectErrors = pushComponentEffectErrors();
@@ -2659,6 +2692,9 @@ function commitReconciliationEffects(
   finishedWork: Fiber,
   committedLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L3] commitReconciliationEffects: mutation 阶段提交 Placement 等协调副作用',
+  );
   // Placement effects (insertions, reorders) can be scheduled on any fiber
   // type. They needs to happen after the children effects have fired, but
   // before the effects on this fiber have fired.
@@ -2878,6 +2914,9 @@ export function commitLayoutEffects(
   root: FiberRoot,
   committedLanes: Lanes,
 ): void {
+  console.log(
+    '[ReactSource:L1] commitLayoutEffects: commit 的 layout 阶段，DOM 变更后执行 layout effects/ref',
+  );
   inProgressLanes = committedLanes;
   inProgressRoot = root;
 
@@ -2895,6 +2934,9 @@ function recursivelyTraverseLayoutEffects(
   parentFiber: Fiber,
   lanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] commitLayoutEffects_begin: layout 阶段递归遍历带 LayoutMask 的子树',
+  );
   if (parentFiber.subtreeFlags & LayoutMask) {
     let child = parentFiber.child;
     while (child !== null) {
@@ -3422,6 +3464,9 @@ export function commitPassiveMountEffects(
   committedTransitions: Array<Transition> | null,
   renderEndTime: number, // Profiling-only
 ): void {
+  console.log(
+    '[ReactSource:L2] commitPassiveMountEffects: passive mount 阶段，进入 useEffect 挂载链路',
+  );
   resetComponentEffectTimers();
 
   commitPassiveMountOnFiber(

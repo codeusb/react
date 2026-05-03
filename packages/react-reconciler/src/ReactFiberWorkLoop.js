@@ -790,6 +790,9 @@ export function getCurrentTime(): number {
 }
 
 export function requestUpdateLane(fiber: Fiber): Lane {
+  console.log(
+    '[ReactSource:L1] Lane 优先级: requestUpdateLane 为本次更新选择对应 lane',
+  );
   // Special cases
   const mode = fiber.mode;
   if (!disableLegacyMode && (mode & ConcurrentMode) === NoMode) {
@@ -918,6 +921,9 @@ export function scheduleUpdateOnFiber(
   fiber: Fiber,
   lane: Lane,
 ) {
+  console.log(
+    '[ReactSource:L1] scheduleUpdateOnFiber: Fiber 更新调度入口，标记 lanes 并确保 root 被调度',
+  );
   if (__DEV__) {
     if (isRunningInsertionEffect) {
       console.error('useInsertionEffect must not schedule updates.');
@@ -2534,6 +2540,9 @@ function renderRootSync(
   lanes: Lanes,
   shouldYieldForPrerendering: boolean,
 ): RootExitStatus {
+  console.log(
+    '[ReactSource:L1] renderRootSync: 同步 render 阶段入口，构建 workInProgress Fiber Tree',
+  );
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher(root.containerInfo);
@@ -2679,6 +2688,9 @@ function renderRootSync(
 // The work loop is an extremely hot path. Tell Closure not to inline it.
 /** @noinline */
 function workLoopSync() {
+  console.log(
+    '[ReactSource:L2] workLoopSync: 同步循环执行 performUnitOfWork，直到 workInProgress 为空',
+  );
   // Perform work without checking if we need to yield between fiber.
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
@@ -2686,6 +2698,9 @@ function workLoopSync() {
 }
 
 function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
+  console.log(
+    '[ReactSource:L1] concurrent 并发: renderRootConcurrent 是并发 render 阶段入口，构建 Fiber Tree 且允许中断恢复',
+  );
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
   const prevDispatcher = pushDispatcher(root.containerInfo);
@@ -2963,6 +2978,9 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
 
 /** @noinline */
 function workLoopConcurrent(nonIdle: boolean) {
+  console.log(
+    '[ReactSource:L1] 异步可中断: workLoopConcurrent 循环执行 Fiber 单元，时间片不足时让出执行权',
+  );
   // We yield every other "frame" when rendering Transition or Retries. Those are blocking
   // revealing new content. The purpose of this yield is not to avoid the overhead of yielding,
   // which is very low, but rather to intentionally block any frequently occuring other main
@@ -2988,6 +3006,9 @@ function workLoopConcurrentByScheduler() {
 }
 
 function performUnitOfWork(unitOfWork: Fiber): void {
+  console.log(
+    '[ReactSource:L1] performUnitOfWork: render 阶段单个 Fiber 工作单元，先 beginWork，必要时进入 completeUnitOfWork',
+  );
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
@@ -3271,6 +3292,9 @@ function panicOnRootError(root: FiberRoot, error: mixed) {
 }
 
 function completeUnitOfWork(unitOfWork: Fiber): void {
+  console.log(
+    '[ReactSource:L1] completeUnitOfWork: Fiber 递归归阶段，执行 completeWork 并向父级冒泡',
+  );
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
   let completedWork: Fiber = unitOfWork;
@@ -3429,6 +3453,9 @@ function commitRoot(
   completedRenderStartTime: number, // Profiling-only
   completedRenderEndTime: number, // Profiling-only
 ): void {
+  console.log(
+    '[ReactSource:L1] commitRoot: render 完成后进入 commit 阶段，提交副作用到宿主环境',
+  );
   root.cancelPendingCommit = null;
 
   do {
@@ -4450,6 +4477,9 @@ export function flushPendingEffects(): boolean {
 }
 
 function flushPassiveEffects(): boolean {
+  console.log(
+    '[ReactSource:L2] flushPassiveEffects: commit 前后冲刷 useEffect 等 passive effects',
+  );
   if (pendingEffectsStatus !== PENDING_PASSIVE_PHASE) {
     return false;
   }
@@ -4487,6 +4517,9 @@ function flushPassiveEffects(): boolean {
 }
 
 function flushPassiveEffectsImpl() {
+  console.log(
+    '[ReactSource:L3] flushPassiveEffectsImpl: passive effects 的实际执行体，处理卸载/挂载 effect',
+  );
   // Cache and clear the transitions flag
   const transitions = pendingPassiveTransitions;
   pendingPassiveTransitions = null;

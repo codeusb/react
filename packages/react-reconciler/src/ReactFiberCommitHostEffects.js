@@ -441,6 +441,9 @@ function insertOrAppendPlacementNode(
   parent: Instance,
   parentFragmentInstances: null | Array<FragmentInstanceType>,
 ): void {
+  console.log(
+    '[ReactSource:L3] insertOrAppendPlacementNode: Placement 递归找到宿主节点并插入/追加 DOM',
+  );
   const {tag} = node;
   const isHost = tag === HostComponent || tag === HostText;
   if (isHost) {
@@ -488,6 +491,9 @@ function insertOrAppendPlacementNode(
 }
 
 function commitPlacement(finishedWork: Fiber): void {
+  console.log(
+    '[ReactSource:L3] commitPlacement: mutation 阶段提交 Placement，把宿主节点放入父容器',
+  );
   // Recursively insert all host nodes into the parent.
   let hostParentFiber;
   let parentFragmentInstances = null;

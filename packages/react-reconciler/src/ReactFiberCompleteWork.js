@@ -243,6 +243,9 @@ function appendAllChildren(
   needsVisibilityToggle: boolean,
   isHidden: boolean,
 ) {
+  console.log(
+    '[ReactSource:L3] appendAllChildren: completeWork mount 阶段把子孙 DOM 节点挂到当前 DOM 节点',
+  );
   if (supportsMutation) {
     // We only have the top Fiber that was created but we need recurse down its
     // children to find all the terminal nodes.
@@ -457,6 +460,9 @@ function updateHostComponent(
   newProps: Props,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] completeWork.updateHostComponent: update 阶段处理 DOM 属性 diff 和更新标记',
+  );
   if (supportsMutation) {
     // If we have an alternate, that means this is an update and we need to
     // schedule a side-effect to do the updates.
@@ -1051,6 +1057,9 @@ function completeWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  console.log(
+    '[ReactSource:L1] completeWork: render 归阶段核心，创建真实 DOM 或收集更新副作用',
+  );
   const newProps = workInProgress.pendingProps;
   // Note: This intentionally doesn't check if we're hydrating because comparing
   // to the current tree provider fiber is just as fast and less error-prone.

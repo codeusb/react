@@ -344,6 +344,9 @@ export function reconcileChildren(
   nextChildren: any,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] reconcileChildren: 根据 mount/update 选择 mountChildFibers 或 reconcileChildFibers 创建子 Fiber',
+  );
   if (current === null) {
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
@@ -1933,6 +1936,9 @@ function updateHostComponent(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] beginWork.updateHostComponent: 处理普通 DOM 标签 Fiber，并 reconcile children',
+  );
   if (current === null) {
     tryToClaimNextHydratableInstance(workInProgress);
   }
@@ -3716,6 +3722,9 @@ function bailoutOnAlreadyFinishedWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  console.log(
+    '[ReactSource:L2] bailoutOnAlreadyFinishedWork: 当前 Fiber 可复用时跳过 beginWork，复用已完成工作',
+  );
   if (current !== null) {
     // Reuse previous dependencies
     workInProgress.dependencies = current.dependencies;
@@ -3847,6 +3856,9 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
+  console.log(
+    '[ReactSource:L2] attemptEarlyBailoutIfNoScheduledUpdate: beginWork 的 update 快速 bailout 分支',
+  );
   // This fiber does not have any pending work. Bailout without entering
   // the begin phase. There's still some bookkeeping we that needs to be done
   // in this optimized path, mostly pushing stuff onto the stack.
@@ -4093,6 +4105,9 @@ function beginWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  console.log(
+    '[ReactSource:L1] beginWork: render 递阶段核心，根据 Fiber tag 创建或复用子 Fiber',
+  );
   if (__DEV__) {
     if (workInProgress._debugNeedsRemount && current !== null) {
       // This will restart the begin phase with a new fiber.

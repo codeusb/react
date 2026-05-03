@@ -1048,6 +1048,9 @@ export function setInitialProperties(
   tag: string,
   props: Object,
 ): void {
+  console.log(
+    '[ReactSource:L2] setInitialProperties: react-dom 初始化 DOM 属性，React 18 diffProperties 的职责已拆分演进',
+  );
   if (__DEV__) {
     validatePropertiesInDevelopment(tag, props);
   }

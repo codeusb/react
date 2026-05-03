@@ -140,6 +140,9 @@ function FiberNode(
   key: null | string,
   mode: TypeOfMode,
 ) {
+  console.log(
+    '[ReactSource:L1] Fiber节点: Fiber 是 React 内部的 JS 对象节点，承载组件状态、树关系与副作用标记',
+  );
   // Instance
   this.tag = tag;
   this.key = key;
@@ -227,6 +230,9 @@ function createFiberImplClass(
   key: null | string,
   mode: TypeOfMode,
 ): Fiber {
+  console.log(
+    '[ReactSource:L3] createFiber: 通过 FiberNode constructor 创建 Fiber 节点',
+  );
   // $FlowFixMe[invalid-constructor]: the shapes are exact here but Flow doesn't like constructors
   return new FiberNode(tag, pendingProps, key, mode);
 }
@@ -237,6 +243,9 @@ function createFiberImplObject(
   key: null | string,
   mode: TypeOfMode,
 ): Fiber {
+  console.log(
+    '[ReactSource:L3] createFiber: 通过对象字面量创建 Fiber 节点',
+  );
   const fiber: Fiber = {
     // Instance
     // tag, key - defined at the bottom as dynamic properties
@@ -323,6 +332,9 @@ export function isFunctionClassComponent(
 
 // This is used to create an alternate fiber to do work on.
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+  console.log(
+    '[ReactSource:L1] Fiber双缓存: createWorkInProgress 基于 current 创建或复用 alternate',
+  );
   let workInProgress = current.alternate;
   if (workInProgress === null) {
     // We use a double buffering pooling technique because we know that we'll
@@ -551,6 +563,9 @@ export function createFiberFromTypeAndProps(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
+  console.log(
+    '[ReactSource:L2] createFiberFromTypeAndProps: 根据元素 type 推导 Fiber tag 并创建 Fiber',
+  );
   let fiberTag: WorkTag = FunctionComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
   let resolvedType = type;
@@ -720,6 +735,9 @@ export function createFiberFromElement(
   mode: TypeOfMode,
   lanes: Lanes,
 ): Fiber {
+  console.log(
+    '[ReactSource:L2] createFiberFromElement: 从 ReactElement 创建 Fiber，连接 element type/key/props',
+  );
   let owner = null;
   if (__DEV__) {
     owner = element._owner;

@@ -107,6 +107,9 @@ function ReactDOMRoot(internalRoot: FiberRoot) {
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
   function (children: ReactNodeList): void {
+    console.log(
+      '[ReactSource:L1] ReactDOMRoot.render: 应用根实例开始渲染，向 reconciler 发起 updateContainer',
+    );
     const root = this._internalRoot;
     if (root === null) {
       throw new Error('Cannot update an unmounted root.');
@@ -172,7 +175,9 @@ export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
 ): RootType {
-  console.log('debug createRoot from local React source');
+  console.log(
+    '[ReactSource:L1] createRoot: React 应用初始化入口，创建 ReactDOMRoot，render 负责渲染根组件',
+  );
   if (!isValidContainer(container)) {
     throw new Error('Target container is not a DOM element.');
   }
