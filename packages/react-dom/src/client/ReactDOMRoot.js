@@ -172,6 +172,7 @@ export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
 ): RootType {
+  console.log('debug createRoot from local React source');
   if (!isValidContainer(container)) {
     throw new Error('Target container is not a DOM element.');
   }
