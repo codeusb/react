@@ -160,7 +160,7 @@ function elementRefGetterWithDeprecationWarning() {
  */
 function ReactElement(type, key, props, owner, debugStack, debugTask) {
   console.log(
-    '[ReactSource:L1] 虚拟 DOM / ReactElement: JSX 或 React.createElement 最终都会创建 ReactElement 对象',
+    '[ReactSource:L1] 02 ReactElement: JSX 和 createElement 都会先生成 ReactElement；根节点由 root.render 交给 Reconciler，组件返回值会在 beginWork 中转成 Fiber',
   );
   // Ignore whatever was passed as the ref argument and treat `props.ref` as
   // the source of truth. The only thing we use this for is `element.ref`,
@@ -284,7 +284,7 @@ function ReactElement(type, key, props, owner, debugStack, debugTask) {
  */
 export function jsxProd(type, config, maybeKey) {
   console.log(
-    '[ReactSource:L1] JSX: 生产环境 JSX 编译产物会调用 jsx/jsxs，返回 ReactElement',
+    '[ReactSource:L1] 02 JSX: 编译后的 JSX 会调用 jsx 和 jsxs 生成 ReactElement；根节点交给 updateContainer，组件 children 交给 beginWork',
   );
   let key = null;
 
@@ -412,7 +412,7 @@ const didWarnAboutKeySpread = {};
  */
 export function jsxDEV(type, config, maybeKey, isStaticChildren) {
   console.log(
-    '[ReactSource:L1] JSX: 开发环境 JSX 编译产物会调用 jsxDEV，返回 ReactElement',
+    '[ReactSource:L1] 02 JSX: 开发环境的 JSX 会调用 jsxDEV 生成 ReactElement；根节点交给 updateContainer，组件 children 交给 beginWork',
   );
   const trackActualOwner =
     __DEV__ &&
@@ -568,7 +568,7 @@ function jsxDEVImpl(
  */
 export function createElement(type, config, children) {
   console.log(
-    '[ReactSource:L1] React.createElement: 手写 createElement 或旧 JSX transform 会从这里创建 ReactElement',
+    '[ReactSource:L1] 02 React.createElement: createElement 会生成 ReactElement；根节点由 root.render 和 updateContainer 消费，组件返回值由 beginWork 消费',
   );
   if (__DEV__) {
     // We don't warn for invalid element type here because with owner stacks,

@@ -141,7 +141,7 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   console.log(
-    '[ReactSource:L1] Fiber节点: Fiber 是 React 内部的 JS 对象节点，承载组件状态、树关系与副作用标记',
+    '[ReactSource:L1] 05 Fiber节点: 初始化 HostRoot 与 Diff 创建子节点时都会创建 FiberNode；Fiber 承载状态、树关系和 flags，随后被 beginWork 与 completeWork 处理',
   );
   // Instance
   this.tag = tag;
@@ -333,7 +333,7 @@ export function isFunctionClassComponent(
 // This is used to create an alternate fiber to do work on.
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   console.log(
-    '[ReactSource:L1] Fiber双缓存: createWorkInProgress 基于 current 创建或复用 alternate',
+    '[ReactSource:L1] 05 Fiber双缓存: Render 开始时 createWorkInProgress 基于 current 准备 alternate；随后从 beginWork 开始遍历新树',
   );
   let workInProgress = current.alternate;
   if (workInProgress === null) {

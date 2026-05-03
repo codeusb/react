@@ -1076,7 +1076,7 @@ function completeWork(
   renderLanes: Lanes,
 ): Fiber | null {
   console.log(
-    '[ReactSource:L1] Render阶段: completeWork 是归阶段核心，创建真实 DOM 或收集更新副作用',
+    '[ReactSource:L1] 05 Render阶段: 当前 Fiber 没有子节点时进入 completeWork；子树完成后也会回到这里，创建 DOM、收集 flags，最终冒泡到 root 后进入 commitRoot',
   );
   // ReactSource: completeWork 和 beginWork 类似，也通过 Fiber tag 分发。
   // 对函数组件等无真实 DOM 的 Fiber，主要是冒泡 flags；对 HostComponent，

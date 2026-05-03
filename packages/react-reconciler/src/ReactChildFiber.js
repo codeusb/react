@@ -1150,7 +1150,7 @@ function createChildReconciler(
     lanes: Lanes,
   ): Fiber | null {
     console.log(
-      '[ReactSource:L1] Diff 算法: reconcileChildrenArray 按 key/index 复用、移动或创建子 Fiber',
+      '[ReactSource:L1] 05 Diff 算法: reconcileChildren 遇到数组 children 时进入 reconcileChildrenArray；根据 key 和 index 复用、移动、创建子 Fiber',
     );
     // This algorithm can't optimize by searching from both ends since we
     // don't have backpointers on fibers. I'm trying to see how far we can get

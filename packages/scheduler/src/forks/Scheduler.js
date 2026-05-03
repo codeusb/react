@@ -187,7 +187,7 @@ function flushWork(initialTime: number) {
 
 function workLoop(initialTime: number) {
   console.log(
-    '[ReactSource:L1] Scheduler: workLoop 循环取出 taskQueue 中的任务，按优先级和过期时间执行',
+    '[ReactSource:L1] 04 Scheduler: requestHostCallback 触发 workLoop；workLoop 从 taskQueue 取出 React root work，执行 performConcurrentWorkOnRoot，并按返回结果决定是否继续调度',
   );
   let currentTime = initialTime;
   advanceTimers(currentTime);
@@ -333,7 +333,7 @@ function unstable_scheduleCallback(
   options?: {delay: number},
 ): Task {
   console.log(
-    '[ReactSource:L1] Scheduler: unstable_scheduleCallback 调度任务入口，按优先级创建 task 并入队',
+    '[ReactSource:L1] 04 Scheduler: ensureRootIsScheduled 把任务交给 unstable_scheduleCallback；这里把 performConcurrentWorkOnRoot 包成 task 放入队列',
   );
   var currentTime = getCurrentTime();
 
@@ -452,7 +452,7 @@ let startTime = -1;
 
 function shouldYieldToHost(): boolean {
   console.log(
-    '[ReactSource:L1] 异步可中断 / 时间切片: shouldYieldToHost 判断当前时间片是否应该让出主线程',
+    '[ReactSource:L1] 04 Scheduler: workLoopConcurrent 会通过 shouldYieldToHost 判断时间片；时间耗尽就让出主线程，体现异步可中断',
   );
   if (!enableAlwaysYieldScheduler && enableRequestPaint && needsPaint) {
     // Yield now.

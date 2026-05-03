@@ -248,7 +248,7 @@ export function getNextLanes(
   rootHasPendingCommit: boolean,
 ): Lanes {
   console.log(
-    '[ReactSource:L1] Lane 优先级: getNextLanes 从 pending lanes 中选出下一批要渲染的 lanes',
+    '[ReactSource:L1] 04 Lane 优先级: root.pendingLanes 已记录待处理更新；getNextLanes 从中选出本轮 lanes，再根据任务类型交给 Scheduler，部分同步任务会直接进入 Render 阶段',
   );
   // Early bailout if there's no pending work left.
   const pendingLanes = root.pendingLanes;
@@ -723,7 +723,7 @@ export function isGestureRender(lanes: Lanes): boolean {
 
 export function claimNextTransitionUpdateLane(): Lane {
   console.log(
-    '[ReactSource:L1] Lane 优先级: claimNextTransitionUpdateLane 为 transition 分配并发更新 lane',
+    '[ReactSource:L1] 03 Lane 优先级: transition 更新会先进入 claimNextTransitionUpdateLane；分配 transition lane 后再随 update 入队',
   );
   // Cycle through the lanes, assigning each new transition to the next lane.
   // In most cases, this means every transition gets its own lane, until we
@@ -825,7 +825,7 @@ export function createLaneMap<T>(initial: T): LaneMap<T> {
 
 export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
   console.log(
-    '[ReactSource:L1] Lane 优先级: markRootUpdated 把 updateLane 标记到 root.pendingLanes',
+    '[ReactSource:L1] 03 Lane 优先级: scheduleUpdateOnFiber 调用 markRootUpdated；把 updateLane 写入 root.pendingLanes，随后 ensureRootIsScheduled 安排调度',
   );
   root.pendingLanes |= updateLane;
   if (enableDefaultTransitionIndicator) {

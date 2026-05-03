@@ -791,7 +791,7 @@ export function getCurrentTime(): number {
 
 export function requestUpdateLane(fiber: Fiber): Lane {
   console.log(
-    '[ReactSource:L1] Lane 优先级: requestUpdateLane 为本次更新选择对应 lane',
+    '[ReactSource:L1] 03 Lane 优先级: updateContainer 与 setState 都会发起更新；requestUpdateLane 先为 update 选择 lane，再交给 markRootUpdated',
   );
   // Special cases
   const mode = fiber.mode;
@@ -2563,7 +2563,7 @@ function renderRootSync(
   shouldYieldForPrerendering: boolean,
 ): RootExitStatus {
   console.log(
-    '[ReactSource:L1] Render阶段: renderRootSync 是同步 render 阶段入口，构建 workInProgress Fiber Tree',
+    '[ReactSource:L1] 05 Render阶段: 同步任务进入 performSyncWorkOnRoot；renderRootSync 准备 workInProgress 树，随后由 workLoopSync 逐个处理 Fiber',
   );
   // ReactSource: 保存旧 executionContext，并把当前执行上下文切到
   // RenderContext。之后 beginWork/completeWork 都运行在 render 阶段。
@@ -2735,7 +2735,7 @@ function workLoopSync() {
 
 function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
   console.log(
-    '[ReactSource:L1] concurrent 并发: renderRootConcurrent 是并发 render 阶段入口，构建 Fiber Tree 且允许中断恢复',
+    '[ReactSource:L1] 05 concurrent 并发: Scheduler 执行 performConcurrentWorkOnRoot；renderRootConcurrent 准备 workInProgress 树，再交给 workLoopConcurrent',
   );
   // ReactSource: 并发 render 同样进入 RenderContext，但工作循环会定期检查
   // 时间片/shouldYield，所以这棵 workInProgress 树可能分多次任务完成。
@@ -3022,7 +3022,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes): RootExitStatus {
 /** @noinline */
 function workLoopConcurrent(nonIdle: boolean) {
   console.log(
-    '[ReactSource:L1] 异步可中断 / 时间切片: workLoopConcurrent 循环执行 Fiber 单元，时间片不足时让出执行权',
+    '[ReactSource:L1] 05 时间切片: workLoopConcurrent 循环执行 performUnitOfWork；时间片耗尽时暂停 Render，把控制权还给 Scheduler',
   );
   // ReactSource: 并发模式下每次只在当前时间预算内处理 Fiber。到达 yieldAfter
   // 后退出，让浏览器有机会处理输入、动画等更高优先级工作。
@@ -3521,7 +3521,7 @@ function commitRoot(
   completedRenderEndTime: number, // Profiling-only
 ): void {
   console.log(
-    '[ReactSource:L1] Commit阶段: commitRoot 在 render 完成后提交副作用到宿主环境',
+    '[ReactSource:L1] 06 Commit阶段: Render 阶段完成后得到 finishedWork；commitRoot 接手，并依次进入 before mutation、mutation、layout',
   );
   root.cancelPendingCommit = null;
 

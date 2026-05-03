@@ -4139,7 +4139,7 @@ function beginWork(
   renderLanes: Lanes,
 ): Fiber | null {
   console.log(
-    '[ReactSource:L1] Render阶段: beginWork 是递阶段核心，根据 Fiber tag 创建或复用子 Fiber',
+    '[ReactSource:L1] 05 Render阶段: performUnitOfWork 会先进入 beginWork；beginWork 按 Fiber tag 处理当前节点，再通过 reconcileChildren 生成子 Fiber',
   );
   if (__DEV__) {
     if (workInProgress._debugNeedsRemount && current !== null) {

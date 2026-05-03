@@ -488,7 +488,7 @@ export function createInstance(
   internalInstanceHandle: Object,
 ): Instance {
   console.log(
-    '[ReactSource:L1] Renderer: createInstance 由 react-dom 渲染器创建真实 DOM Element',
+    '[ReactSource:L1] 05 Renderer: completeWork 处理 HostComponent 时调用 createInstance；react-dom 创建真实 DOM，保存到 fiber.stateNode，commit 再插入页面',
   );
   // ReactSource: react-reconciler 不直接知道怎么创建 DOM，它通过 host config
   // 调用 react-dom 的 createInstance。这里根据命名空间创建真实 Element。

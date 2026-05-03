@@ -541,7 +541,7 @@ function performWorkOnRootViaSchedulerTask(
   didTimeout: boolean,
 ): RenderTaskFn | null {
   console.log(
-    '[ReactSource:L1] concurrent 并发: performConcurrentWorkOnRoot 经 Scheduler 执行 root work',
+    '[ReactSource:L1] 04 Scheduler: Scheduler 取到 root task 后执行 performConcurrentWorkOnRoot；选出 lanes 后进入 performWorkOnRoot 和 renderRootConcurrent，体现 concurrent 并发',
   );
   // ReactSource: React 19 当前对应旧文档里的 performConcurrentWorkOnRoot。
   // Scheduler 执行到这个 callback 后，才真正进入 performWorkOnRoot。

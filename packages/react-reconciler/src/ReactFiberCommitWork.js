@@ -343,7 +343,7 @@ export function commitBeforeMutationEffects(
   committedLanes: Lanes,
 ): void {
   console.log(
-    '[ReactSource:L1] Commit阶段: before mutation 阶段，DOM 变更前遍历副作用',
+    '[ReactSource:L1] 06 Commit阶段: commitRoot 首先进入 before mutation；此时 DOM 还未变更，可读取快照并处理焦点，然后进入 mutation',
   );
   // ReactSource: before mutation 阶段入口。此时 DOM 还没被修改，renderer 先做
   // commit 前准备：保存当前焦点/选择信息、临时禁用事件系统，并返回当前焦点 Fiber。
@@ -2014,7 +2014,7 @@ export function commitMutationEffects(
   committedLanes: Lanes,
 ) {
   console.log(
-    '[ReactSource:L1] Commit阶段: mutation 阶段，真正执行 DOM 插入/删除/更新',
+    '[ReactSource:L1] 06 Commit阶段: before mutation 完成后进入 mutation；这里调用 Renderer 插入、删除、更新 DOM，随后切换 root.current',
   );
   inProgressLanes = committedLanes;
   inProgressRoot = root;
@@ -2975,7 +2975,7 @@ export function commitLayoutEffects(
   committedLanes: Lanes,
 ): void {
   console.log(
-    '[ReactSource:L1] Commit阶段: layout 阶段，DOM 变更后执行 layout effects/ref',
+    '[ReactSource:L1] 06 Commit阶段: mutation 完成并切换 root.current 后进入 layout；此时 DOM 已更新，可以执行 useLayoutEffect、componentDidMount 和 ref',
   );
   inProgressLanes = committedLanes;
   inProgressRoot = root;
