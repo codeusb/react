@@ -396,7 +396,7 @@ function insertOrAppendPlacementNodeIntoContainer(
   parentFragmentInstances: null | Array<FragmentInstanceType>,
 ): void {
   console.log(
-    '[ReactSource:L3] insertOrAppendPlacementNodeIntoContainer: Placement 插入 root/portal 容器',
+    '[ReactSource:L3] insertOrAppendPlacementNodeIntoContainer: Placement 递归插入 root 容器或 portal 容器',
   );
   const {tag} = node;
   const isHost = tag === HostComponent || tag === HostText;
@@ -459,7 +459,7 @@ function insertOrAppendPlacementNode(
   parentFragmentInstances: null | Array<FragmentInstanceType>,
 ): void {
   console.log(
-    '[ReactSource:L3] insertOrAppendPlacementNode: Placement 递归找到宿主节点并插入/追加 DOM',
+    '[ReactSource:L3] insertOrAppendPlacementNode: Placement 递归找到宿主节点并执行插入或追加',
   );
   const {tag} = node;
   const isHost = tag === HostComponent || tag === HostText;
@@ -669,7 +669,7 @@ export function commitHostRemoveChildFromContainer(
   hostInstance: Instance | TextInstance,
 ) {
   console.log(
-    '[ReactSource:L2] commitHostRemoveChildFromContainer: mutation 阶段从 root/portal 容器删除 DOM',
+    '[ReactSource:L2] commitHostRemoveChildFromContainer: mutation 阶段从 root 容器或 portal 容器删除 DOM',
   );
   try {
     if (__DEV__) {

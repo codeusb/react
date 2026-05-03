@@ -359,7 +359,7 @@ export function commitClassLayoutLifecycles(
   current: Fiber | null,
 ) {
   console.log(
-    '[ReactSource:L2] commitClassLayoutLifecycles: layout 阶段执行类组件 DidMount/DidUpdate',
+    '[ReactSource:L2] commitClassLayoutLifecycles: layout 阶段执行类组件 DidMount 与 DidUpdate',
   );
   const instance = finishedWork.stateNode;
   if (current === null) {

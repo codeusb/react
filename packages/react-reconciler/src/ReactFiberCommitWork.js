@@ -627,7 +627,7 @@ function commitLayoutEffectOnFiber(
   committedLanes: Lanes,
 ): void {
   console.log(
-    '[ReactSource:L2] commitLayoutEffectOnFiber: layout 阶段处理单个 Fiber 的 layout effect/ref',
+    '[ReactSource:L2] commitLayoutEffectOnFiber: layout 阶段处理单个 Fiber 的 layout effect 与 ref 绑定',
   );
   const prevEffectStart = pushComponentEffectStart();
   const prevEffectDuration = pushComponentEffectDuration();
@@ -2014,7 +2014,7 @@ export function commitMutationEffects(
   committedLanes: Lanes,
 ) {
   console.log(
-    '[ReactSource:L1] 06 Commit阶段: before mutation 完成后进入 mutation；这里调用 Renderer 插入、删除、更新 DOM，随后切换 root.current',
+    '[ReactSource:L1] 06 Commit阶段: before mutation 完成后进入 mutation；Renderer 在这里把变更写入真实 DOM，随后切换 root.current 并进入 layout',
   );
   inProgressLanes = committedLanes;
   inProgressRoot = root;
